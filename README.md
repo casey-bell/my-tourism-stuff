@@ -7,4 +7,4 @@ Connect with me!
 
 casey.bell.7@outlook.com
 
-linkedin.com/in/casey-bell
+www.linkedin.com/in/casey-bell
