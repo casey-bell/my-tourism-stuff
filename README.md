@@ -1,2 +1,2 @@
-# my-tourism-stuff
-This is where I keep my projects
+# Tourism Data Projects
+This project is a starting point for exploring tourism data.
