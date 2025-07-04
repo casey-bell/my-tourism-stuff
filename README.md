@@ -1,10 +1,13 @@
-# My Tourism Stuff
-This is where I develop, test and host random stuff that I make myself interested in! Do bear with me as this is very obviously a mess, I'm cleaning it up in due course.
+# My Tourism  Stufff
 
-///
+Welcome to my portfolio! I'm passionate about travel and tourism.
 
-Connect with me!
+## What You'll Find Here
+Not much for now
 
-casey.bell.7@outlook.com
+## Connect with Me
+- 📧 Email: casey.bell.7@outlook.com
+- 💼 LinkedIn: www.linkedin.com/in/casey-bell
 
-www.linkedin.com/in/casey-bell
+## Licence
+This project is licensed under MIT
