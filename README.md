@@ -41,15 +41,14 @@ This dataset is suitable for:
 ## Data Source
 Office for National Statistics licensed under the Open Government Licence v3.0.
 
-## Licence
-This repository is licensed under the MIT License, see the LICENSE file for details.
-
-The dataset is Crown Copyright and available under the Open Government Licence.
-
 ## Contact
-
 For questions about this repository or analysis, please contact Casey Bell at [casey.bell.7@outlook.com](casey.bell.7@outlook.com) or on LinkedIn at [linkedin.com/in/casey-bell](linkedin.com/in/casey-bell)
 
 For official data enquiries, contact the Office for National Statistics:
 - Email: [pop.info@ons.gov.uk](pop.info@ons.gov.uk)
 - Address: Office for National Statistics, Segensworth Road, Fareham PO15 5RR, United Kingdom
+
+## Licence
+This repository is licensed under the MIT License, see the LICENSE file for details.
+
+The dataset is Crown Copyright and available under the Open Government Licence.
