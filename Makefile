@@ -1,99 +1,67 @@
 # Makefile for my-tourism-stuff
 
-# Paths
-PYTHON        := python3
-NBEXEC        := jupyter nbconvert
-ROOT          := $(PWD)
-NOTEBOOKS_DIR := notebooks
-RAW_DIR       := data/raw
-PROC_DIR      := data/processed
-FIG_DIR       := figures
-REPORTS_DIR   := reports
+# Configuration
+PYTHON := python3
+NOTEBOOK_DIR := notebooks
+DATA_RAW_DIR := data/raw
+DATA_PROC_DIR := data/processed
+SRC_DIR := src
 
-# Data
-DATA_XLSX := overseas-visitors-to-britain-2024.xlsx
+# Files
+RAW_DATA := $(DATA_RAW_DIR)/overseas-visitors-to-britain-2024.xlsx
+NOTEBOOK := $(NOTEBOOK_DIR)/01-ingest-and-clean.ipynb
 
-# Default
-.PHONY: help
+.PHONY: help install test lint format clean data clean-all
+
 help:
-    @echo "Available targets:"
-    @echo "  init        Create directories and place raw data"
-    @echo "  env         Set up Python environment and install project"
-    @echo "  ingest      Execute ingestion/cleaning notebook"
-    @echo "  validate    Basic checks on processed outputs"
-    @echo "  eda         Execute EDA notebook (if present)"
-    @echo "  report      Build summary report (if present)"
-    @echo "  figures     Collate figures (created during EDA)"
-    @echo "  clean       Remove generated outputs"
-    @echo "  clobber     Reset repo-generated artefacts"
+	@echo "UK Tourism Data Analysis - Available targets:"
+	@echo "  install    Install dependencies from pyproject.toml"
+	@echo "  data       Run data ingestion and cleaning notebook"
+	@echo "  test       Run tests (if any)"
+	@echo "  lint       Check code quality with flake8"
+	@echo "  format     Format code with black and isort"
+	@echo "  clean      Remove Python cache and temporary files"
+	@echo "  clean-all  Remove all generated files and outputs"
 
-# Setup
-.PHONY: init
-init:
-    @mkdir -p $(RAW_DIR) $(PROC_DIR) $(FIG_DIR) $(REPORTS_DIR)
-    @test -f "$(DATA_XLSX)" && cp "$(DATA_XLSX)" "$(RAW_DIR)/" || \
-        ( echo "Missing $(DATA_XLSX) in repo root"; exit 1 )
-    @echo "Initialised directories and staged raw data."
+install:
+	$(PYTHON) -m pip install --upgrade pip
+	$(PYTHON) -m pip install -e .[dev]
+	@echo "✅ Dependencies installed"
 
-.PHONY: env
-env:
-    $(PYTHON) -m pip install -U pip
-    # Install project from pyproject.toml (editable)
-    $(PYTHON) -m pip install -e .
-    # Core tooling for notebooks
-    $(PYTHON) -m pip install jupyter nbconvert
-    @echo "Environment ready."
+data: $(RAW_DATA)
+	@echo "🚀 Running data ingestion pipeline..."
+	$(PYTHON) -m jupyter nbconvert --to notebook --execute \
+		--output $(NOTEBOOK_DIR)/01-ingest-and-clean-executed \
+		$(NOTEBOOK)
+	@echo "✅ Data processing complete"
 
-# Ingestion and cleaning
-.PHONY: ingest
-ingest: init
-    # Execute the ingestion/cleaning notebook and save executed copy
-    $(NBEXEC) --to notebook --execute \
-        "$(NOTEBOOKS_DIR)/01-ingest-and-clean.ipynb" \
-        --output "$(NOTEBOOKS_DIR)/01-ingest-and-clean-executed.ipynb"
-    @echo "Ingestion and cleaning completed."
+test:
+	@if [ -d "$(SRC_DIR)" ] && [ -n "$$(ls -A $(SRC_DIR) 2>/dev/null)" ]; then \
+		$(PYTHON) -m pytest $(SRC_DIR) -v; \
+	else \
+		echo "⚠️  No tests configured - add tests to $(SRC_DIR)"; \
+	fi
 
-# Validation
-.PHONY: validate
-validate: ingest
-    @test -d "$(PROC_DIR)" || ( echo "Processed directory missing"; exit 1 )
-    @ls "$(PROC_DIR)" | grep -E 'csv$$' > /dev/null || \
-        ( echo "No processed CSVs found in $(PROC_DIR)"; exit 1 )
-    @echo "Validation passed: processed CSVs present."
+lint:
+	$(PYTHON) -m flake8 $(SRC_DIR) --max-line-length=88
+	@echo "✅ Code quality check passed"
 
-# Exploratory analysis
-.PHONY: eda
-eda: ingest
-    @test -f "$(NOTEBOOKS_DIR)/02-eda-and-trends.ipynb" || \
-        ( echo "EDA notebook not found: $(NOTEBOOKS_DIR)/02-eda-and-trends.ipynb"; exit 1 )
-    $(NBEXEC) --to notebook --execute \
-        "$(NOTEBOOKS_DIR)/02-eda-and-trends.ipynb" \
-        --output "$(NOTEBOOKS_DIR)/02-eda-and-trends-executed.ipynb"
-    @echo "EDA completed."
+format:
+	$(PYTHON) -m black $(SRC_DIR) $(NOTEBOOK_DIR)
+	$(PYTHON) -m isort $(SRC_DIR) $(NOTEBOOK_DIR)
+	@echo "✅ Code formatted"
 
-# Reports
-.PHONY: report
-report: eda
-    @test -f "$(REPORTS_DIR)/gb-tourism-2019-2024-summary.md" || \
-        ( echo "Report source missing: $(REPORTS_DIR)/gb-tourism-2019-2024-summary.md"; exit 1 )
-    @echo "Report ready: $(REPORTS_DIR)/gb-tourism-2019-2024-summary.md"
-
-# Figures
-.PHONY: figures
-figures: eda
-    @test -d "$(FIG_DIR)" || ( echo "Figures directory missing"; exit 1 )
-    @echo "Figures available in $(FIG_DIR)."
-
-# Cleaning
-.PHONY: clean
 clean:
-    @rm -rf "$(PROC_DIR)" "$(FIG_DIR)" "$(REPORTS_DIR)"
-    @mkdir -p "$(PROC_DIR)" "$(FIG_DIR)" "$(REPORTS_DIR)"
-    @echo "Cleaned generated outputs."
+	@find . -type f -name "*.pyc" -delete
+	@find . -type d -name "__pycache__" -delete
+	@find . -type d -name ".ipynb_checkpoints" -exec rm -rf {} + 2>/dev/null || true
+	@rm -rf .pytest_cache .coverage htmlcov
+	@echo "✅ Cleaned temporary files"
 
-.PHONY: clobber
-clobber: clean
-    @rm -rf "$(RAW_DIR)"
-    @rm -f "$(NOTEBOOKS_DIR)/01-ingest-and-clean-executed.ipynb"
-    @rm -f "$(NOTEBOOKS_DIR)/02-eda-and-trends-executed.ipynb"
-    @echo "Reset repository-generated artefacts."
+clean-all: clean
+	@rm -rf $(DATA_PROC_DIR)
+	@rm -f $(NOTEBOOK_DIR)/*-executed.ipynb
+	@echo "✅ Removed all generated outputs"
+
+# Default target
+.DEFAULT_GOAL := help
