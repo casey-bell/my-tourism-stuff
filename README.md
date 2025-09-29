@@ -1,54 +1,83 @@
 # My Tourism Stuff
-A tourism data analytics repository.
+A data analysis project.
 
 ## Overview
-This repository contains official statistics from the Office for National Statistics (ONS) detailing overseas residents' visits, spending, and nights stayed in Great Britain. The dataset provides quarterly estimates from 2019 to 2024, with comprehensive breakdowns by region, purpose of visit, country of residence, and transport mode.
+This repository contains a data pipeline and analysis of overseas residents’ visits to Great Britain. The project processes official statistics from the Office for National Statistics (ONS) to analyse trends in visitor numbers, expenditure, and nights stayed from 2019–2024.
+
+## Project Structure
+```text
+my-tourism-stuff/
+├── data/
+│   └── raw/
+│       └── overseas-visitors-to-britain-2024.xlsx
+├── notebooks/
+│   └── 01-ingest-and-clean.ipynb
+├── src/
+│   └── (utility functions for analysis)
+├── Makefile
+├── pyproject.toml
+├── README.md
+├── LICENSE
+└── .gitignore
+```
 
 ## Dataset
-**File:** `overseas-visits-to-britain-2024.xlsx`
+- Source file: `/data/raw/overseas-visitors-to-britain-2024.xlsx`
 
 ### Key Features
 - Quarterly data from Q1 2019 to Q4 2024
-- Coverage: UK (2019-2023) → Great Britain (2024 onwards)
-- Metrics: Number of visits, spending (£ millions), nights stayed
+- Coverage: UK (2019–2023) → Great Britain (2024 onwards)
+- Metrics: number of visits, expenditure (£ millions), nights stayed
 - Breakdowns by:
   - Geographic region (North America, Europe, Other Countries)
   - Purpose of visit (Holiday, Business, VFR, Miscellaneous)
-  - Transport mode (Air, Sea & Tunnel)
+  - Mode of transport (Air, Sea and Tunnel)
   - UK regions visited
   - Individual countries of residence
 
 ### Important Notes
-- **Methodological Break**: Data from 2024 onwards covers Great Britain only (excluding Northern Ireland), while 2019-2023 data covers the entire UK
-- **Official Statistics in Development**: These estimates are labelled as developmental as methodologies are being refined
-- **Confidence Intervals**: Provided for principal estimates to indicate statistical reliability
-
-## Repository Structure
-```text
-├── .gitignore
-├── LICENSE
-└── overseas-visitors-to-britain-2024.xlsx
-```
+- Methodological break: data from 2024 onwards covers Great Britain only (excluding Northern Ireland), while 2019–2023 data covers the entire UK
+- Official statistics in development: these estimates are labelled as developmental as methodologies are being refined
 
 ## Usage
-This dataset is suitable for:
-- Tourism trend analysis
+### Quick start
+```bash
+# Install dependencies
+pip install -e .
+
+# Run the full data pipeline
+make all
+```
+
+### Manual execution
+- Run the Jupyter notebook: `notebooks/01-ingest-and-clean.ipynb`
+- This processes raw data from `/data/raw/` and outputs cleaned datasets
+
+## Use cases
+- Tourism trend analysis and visualisation
 - Regional economic impact studies
 - Seasonal pattern identification
 - Market research by country of origin
-- Policy analysis and planning
 
-## Data Source
-Office for National Statistics licensed under the Open Government Licence v3.0.
+## Data source
+Office for National Statistics, licensed under the Open Government Licence v3.0.
+
+- ONS: https://www.ons.gov.uk
+- OGL v3.0: https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+
+## Development
+- Dependencies are managed via `pyproject.toml`
+- Data processing pipeline automated with `Makefile`
+- Raw data is kept separate from processed outputs
 
 ## Contact
-For questions about this repository or analysis, please contact Casey Bell at [casey.bell.7@outlook.com](casey.bell.7@outlook.com) or on LinkedIn at [linkedin.com/in/casey-bell](linkedin.com/in/casey-bell)
+- Repository maintainer: Casey Bell  
+  Email: mailto:casey.bell.7@outlook.com  
+  LinkedIn: https://linkedin.com/in/casey-bell
 
-For official data enquiries, contact the Office for National Statistics:
-- Email: [pop.info@ons.gov.uk](pop.info@ons.gov.uk)
-- Address: Office for National Statistics, Segensworth Road, Fareham PO15 5RR, United Kingdom
+- Official data enquiries: Office for National Statistics  
+  Email: mailto:pop.info@ons.gov.uk
 
 ## Licence
-This repository is licensed under the MIT License, see the LICENSE file for details.
-
-The dataset is Crown Copyright and available under the Open Government Licence.
+- Code: MIT License (see `LICENSE` file)
+- Data: Crown copyright, Open Government Licence v3.0
