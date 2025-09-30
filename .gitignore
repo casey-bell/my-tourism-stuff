@@ -1,36 +1,94 @@
-# Byte-compiled / optimized / DLL files
+# Byte-compiled / optimised / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*.ipynb
 
 # Environment variables
 .env
 .venv
 env/
 venv/
+ENV/
 
-# Data files (uncomment if you don't want to track data in repo)
-# *.csv
-# *.xlsx
-# *.json
-# *.parquet
+# Data files
+# Raw data is tracked, but interim/processed data should not be
+data/interim/*
+!data/interim/.gitkeep
+
+# Model files and large binaries
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.hdf5
+*.model
+*.pth
+
+# Output directories
+output/
+results/
+models/
+exports/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
 # Logs
 *.log
+logs/
+
+# Profiling data
+*.prof
+*.profile
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+
+# Package management
+.python-version
+Pipfile
+Pipfile.lock
+poetry.lock
+requirements*.txt
 
 # Temporary files
 *.tmp
 *.temp
+.cache/
+
+# Configuration files (except those we want to track)
+*.config
+*.cfg
+!pyproject.toml
+
+# Compressed archives
+*.zip
+*.tar.gz
+*.7z
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
