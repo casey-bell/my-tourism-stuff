@@ -1,9 +1,8 @@
 """
 Clean and standardise overseas visitors dataset.
 
-Reads the raw Excel file (worksheet "1"), normalises column names and types,
-derives quarterly periods, harmonises categorical fields, and writes an interim
-Parquet dataset for downstream use.
+Reads the raw Excel file, normalises column names and types, derives quarterly periods,
+harmonises categorical fields, and writes an interim Parquet dataset for downstream use.
 """
 
 from __future__ import annotations
@@ -11,7 +10,7 @@ from __future__ import annotations
 import argparse
 import logging
 from pathlib import Path
-from typing import Dict
+from typing import Optional, Dict
 
 import numpy as np
 import pandas as pd
@@ -22,9 +21,6 @@ RAW_DIR = Path("data/raw")
 INTERIM_DIR = Path("data/interim")
 DEFAULT_INPUT = RAW_DIR / "overseas-visitors-to-britain-2024.xlsx"
 DEFAULT_OUTPUT = INTERIM_DIR / "visitors_clean.parquet"
-
-TARGET_SHEET = "1"
-HEADER_ROW = 8  # zero-based index for row 9
 
 
 # Configure logging
@@ -48,6 +44,7 @@ def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df.columns = [_to_snake(c) for c in df.columns]
 
+    # Common renames into a consistent schema if present
     rename_map: Dict[str, str] = {
         "year": "year",
         "qtr": "quarter",
@@ -57,7 +54,7 @@ def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
         "number_of_visits": "visits",
         "expenditure_gbp_millions": "expenditure_millions",
         "expenditure_millions": "expenditure_millions",
-        "expenditure_gbp": "expenditure_millions",
+        "expenditure_gbp": "expenditure_millions",  # will be coerced later
         "nights": "nights",
         "number_of_nights": "nights",
         "purpose": "purpose",
@@ -82,13 +79,18 @@ def _coerce_numerics(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
     def to_numeric(series: pd.Series) -> pd.Series:
-        return pd.to_numeric(series, errors="coerce").astype("Float64")
+        return (
+            pd.to_numeric(series, errors="coerce")
+            .astype("Float64")
+        )
 
     for col in ["visits", "expenditure_millions", "nights"]:
         if col in df.columns:
             df[col] = to_numeric(df[col])
 
+    # If expenditure provided in GBP, convert to millions
     if "expenditure_millions" in df.columns:
+        # Detect very large numbers likely in GBP
         mask = df["expenditure_millions"] > 1_000_000
         if mask.any():
             logging.info("Converting expenditure from GBP to millions.")
@@ -100,16 +102,20 @@ def _coerce_numerics(df: pd.DataFrame) -> pd.DataFrame:
 def _derive_quarter(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
+    # Try existing year + quarter codes
     if "year" in df.columns and "quarter" in df.columns:
+        # Normalise quarter values like "Q1", 1, "1" → "Q1"
         q = df["quarter"].astype(str).str.upper().str.extract(r"(\d)").squeeze()
         df["quarter"] = "Q" + q.fillna("").replace("", np.nan)
     elif "period" in df.columns:
+        # Attempt to parse strings like "2024 Q1" or "Q1 2024"
         period = df["period"].astype(str).str.upper()
         year = period.str.extract(r"(20\d{2})", expand=False)
         q = period.str.extract(r"Q([1-4])", expand=False)
         df["year"] = pd.to_numeric(year, errors="coerce")
         df["quarter"] = q.where(q.isin(["1", "2", "3", "4"]), np.nan).map(lambda x: f"Q{x}" if pd.notna(x) else np.nan)
 
+    # Construct pandas Period for quarter if possible
     if "year" in df.columns and "quarter" in df.columns:
         valid_q = df["quarter"].isin(["Q1", "Q2", "Q3", "Q4"])
         df.loc[valid_q, "period_q"] = (
@@ -126,8 +132,14 @@ def _derive_quarter(df: pd.DataFrame) -> pd.DataFrame:
 def _normalise_categories(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
+    # Purpose of visit
     if "purpose" in df.columns:
-        std = df["purpose"].astype(str).str.strip().str.lower()
+        std = (
+            df["purpose"]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+        )
         purpose_map = {
             "holiday": "Holiday",
             "leisure": "Holiday",
@@ -140,19 +152,31 @@ def _normalise_categories(df: pd.DataFrame) -> pd.DataFrame:
         }
         df["purpose"] = std.map(lambda x: purpose_map.get(x, x.title()))
 
+    # Transport mode
     if "transport" in df.columns:
-        std = df["transport"].astype(str).str.strip().str.lower()
+        std = (
+            df["transport"]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+        )
         transport_map = {
             "air": "Air",
             "sea": "Sea",
             "ferry": "Sea",
             "tunnel": "Tunnel",
-            "rail": "Tunnel",
+            "rail": "Tunnel",  # Eurostar/Channel Tunnel typically captured as tunnel/rail
         }
         df["transport"] = std.map(lambda x: transport_map.get(x, x.title()))
 
+    # Region (macro)
     if "region" in df.columns:
-        std = df["region"].astype(str).str.strip().str.lower()
+        std = (
+            df["region"]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+        )
         region_map = {
             "europe": "Europe",
             "north america": "North America",
@@ -166,6 +190,7 @@ def _normalise_categories(df: pd.DataFrame) -> pd.DataFrame:
 
 def _add_coverage_flag(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
+    # Coverage is UK up to 2023; GB from 2024 onwards
     if "year" in df.columns:
         df["coverage"] = np.where(df["year"].fillna(0) >= 2024, "Great Britain", "United Kingdom")
     else:
@@ -178,7 +203,9 @@ def clean(input_path: Path, output_path: Path) -> Path:
     if not input_path.exists():
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
-    df = pd.read_excel(input_path, sheet_name=TARGET_SHEET, header=HEADER_ROW, dtype=str)
+    # Read specific worksheet "1" with header at row 9 (0-indexed row 8)
+    logging.info("Reading worksheet '1' with header at row 9")
+    df = pd.read_excel(input_path, sheet_name="1", header=8, dtype=str)
 
     logging.info("Standardising column names.")
     df = _standardise_columns(df)
@@ -195,6 +222,7 @@ def clean(input_path: Path, output_path: Path) -> Path:
     logging.info("Adding coverage flag.")
     df = _add_coverage_flag(df)
 
+    # Basic ordering for readability
     preferred_order = [
         "year",
         "quarter",
@@ -212,6 +240,7 @@ def clean(input_path: Path, output_path: Path) -> Path:
     cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
     df = df[cols]
 
+    # Ensure output directory exists
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     logging.info(f"Writing interim dataset to: {output_path}")
