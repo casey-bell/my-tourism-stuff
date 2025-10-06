@@ -4,12 +4,15 @@ __pycache__/
 *$py.class
 *.so
 .Python
+build/
+dist/
+*.egg-info/
 
 # Jupyter Notebook
-.ipynb_checkpoints
-*.ipynb
+.ipynb_checkpoints/
+.nbdiff*
 
-# Environment variables
+# Environment
 .env
 .venv
 env/
@@ -17,11 +20,10 @@ venv/
 ENV/
 
 # Data files
-# Raw data is tracked, but interim/processed data should not be
 data/interim/*
 !data/interim/.gitkeep
 
-# Model files and large binaries
+# Models and serialised data
 *.pkl
 *.pickle
 *.joblib
@@ -29,12 +31,16 @@ data/interim/*
 *.hdf5
 *.model
 *.pth
+*.pt
+*.safetensors
 
 # Output directories
 output/
 results/
 models/
 exports/
+reports/
+artifacts/
 
 # IDE
 .vscode/
@@ -42,6 +48,7 @@ exports/
 *.swp
 *.swo
 *~
+.nova/
 
 # OS
 .DS_Store
@@ -55,40 +62,61 @@ Thumbs.db
 # Logs
 *.log
 logs/
+mlruns/
 
-# Profiling data
-*.prof
-*.profile
-
-# Coverage reports
-htmlcov/
+# Testing and coverage
+.pytest_cache/
 .coverage
 .coverage.*
-.pytest_cache/
+htmlcov/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+hypothesis/
 
 # Package management
 .python-version
 Pipfile
 Pipfile.lock
 poetry.lock
-requirements*.txt
+__pypackages__/
 
 # Temporary files
 *.tmp
 *.temp
 .cache/
+.directory
 
-# Configuration files (except those we want to track)
-*.config
-*.cfg
-!pyproject.toml
+# Data science specific
+*.parquet
+*.feather
+*.orc
+*.dvc
+
+# Notebook output cells
+.nbconvert/
+
+# Profiling
+*.prof
+*.profile
 
 # Compressed archives
 *.zip
 *.tar.gz
 *.7z
 
-# SQLite databases
+# SQLite
 *.db
 *.sqlite
 *.sqlite3
+
+# API keys and secrets
+*.key
+*.pem
+*_config.py
+
+# OS specific
+[Tt]humbs.db
+$RECYCLE.BIN/
+*.lnk
