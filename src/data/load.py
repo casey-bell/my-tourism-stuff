@@ -1,8 +1,8 @@
 """
 Data loading utilities for the tourism project.
 
-Provides functions to read the specific 'Table 1' worksheet from the ONS Excel workbook.
-Handles the specific structure of the ONS data with appropriate header positioning.
+Functions to read worksheets from the ONS Excel workbook, including the specific
+'Table 1' sheet with known header positioning.
 """
 
 from __future__ import annotations
@@ -12,11 +12,17 @@ from typing import Optional, Union
 
 import pandas as pd
 
-
 # Project-relative locations
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
 DEFAULT_FILENAME = "overseas-visitors-to-britain-2024.xlsx"
+
+__all__ = [
+    "raw_file_path",
+    "load_excel",
+    "load_table_1",
+    "verify_table_1_loaded",
+]
 
 
 def raw_file_path(filename: Optional[str] = None) -> Path:
@@ -32,75 +38,73 @@ def raw_file_path(filename: Optional[str] = None) -> Path:
     return path
 
 
-def load_table_1(
+def load_excel(
     path: Union[str, Path, None] = None,
-    engine: str = "openpyxl",
+    *,
+    sheet_name: Union[str, int] = 0,
+    header: Optional[int] = 0,
+    engine: Optional[str] = "openpyxl",
+    dtype: Optional[dict] = None,
 ) -> pd.DataFrame:
     """
-    Load the specific 'Table 1' worksheet from the ONS workbook.
-    
-    This function is tailored to read worksheet "1" which contains the number of visits 
-    by overseas residents, with the header starting at row 9 (0-indexed).
-    
-    Returns an empty DataFrame if the sheet cannot be loaded.
+    Generic Excel worksheet loader.
+
+    Parameters:
+    - path: Path to the workbook. If None, resolves to the default raw file path.
+    - sheet_name: Worksheet name or index to read.
+    - header: Row index to use for column names.
+    - engine: Excel engine to use (e.g., 'openpyxl').
+    - dtype: Optional column dtypes mapping.
+
+    Returns:
+    - DataFrame containing the requested worksheet. Returns an empty DataFrame
+      if the sheet cannot be read.
     """
     excel_path = raw_file_path() if path is None else Path(path)
     if not excel_path.exists():
         raise FileNotFoundError(f"Workbook does not exist: {excel_path}")
 
     try:
-        # Read only worksheet "1" with header at row 9
         df = pd.read_excel(
-            excel_path, 
-            sheet_name="1",
-            header=9,  # Header row for Table 1 data
-            engine=engine
+            excel_path,
+            sheet_name=sheet_name,
+            header=header,
+            engine=engine,
+            dtype=dtype,
         )
-        
-        # Trim leading/trailing whitespace from column names
+        # Normalise column names
         df.columns = [str(col).strip() for col in df.columns]
-        
         return df
-        
     except ValueError as e:
-        if "Worksheet named '1' not found" in str(e):
-            print(f"Warning: Worksheet '1' not found in {excel_path}")
+        # Common failure when a named sheet is missing
+        if isinstance(sheet_name, str) and f"Worksheet named '{sheet_name}' not found" in str(e):
             return pd.DataFrame()
-        raise ValueError(f"Failed to read worksheet '1' from workbook: {e}") from e
-    except Exception as e:
-        print(f"Error loading worksheet '1': {e}")
+        raise ValueError(f"Failed to read worksheet '{sheet_name}' from workbook: {e}") from e
+    except Exception:
         return pd.DataFrame()
+
+
+def load_table_1(
+    path: Union[str, Path, None] = None,
+    engine: Optional[str] = "openpyxl",
+) -> pd.DataFrame:
+    """
+    Load the specific 'Table 1' worksheet from the ONS workbook.
+
+    Reads worksheet '1' where column headers begin at row index 9.
+    Returns an empty DataFrame if loading fails.
+    """
+    return load_excel(path=path, sheet_name="1", header=9, engine=engine)
 
 
 def verify_table_1_loaded() -> bool:
     """
-    Verify that worksheet "1" can be loaded successfully and contains data.
-    
-    Returns True if data is loaded successfully and contains rows, False otherwise.
+    Verify that worksheet '1' can be loaded successfully and contains data.
+
+    Returns True if data is loaded and has at least one row, otherwise False.
     """
     try:
         df = load_table_1()
         return df is not None and not df.empty and df.shape[0] > 0
     except Exception:
         return False
-
-
-if __name__ == "__main__":
-    # Diagnostic function specifically for Table 1
-    try:
-        file_path = raw_file_path()
-        print(f"Workbook: {file_path}")
-        
-        df = load_table_1()
-        if df.empty:
-            print("Worksheet '1' is empty or could not be loaded")
-        else:
-            print(f"Worksheet '1' loaded successfully:")
-            print(f"- Shape: {df.shape[0]} rows, {df.shape[1]} columns")
-            print(f"- Columns: {list(df.columns)}")
-            print(f"- First few periods: {df['Period'].head().tolist() if 'Period' in df.columns else 'N/A'}")
-            
-    except FileNotFoundError as e:
-        print(f"Error: {e}")
-    except Exception as e:
-        print(f"Unexpected error: {e}")
