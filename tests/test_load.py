@@ -8,10 +8,10 @@ from src.data.load import load_excel
 
 
 def _make_sample_frame(period_prefix: str, rows: int = 3) -> pd.DataFrame:
-    """Create a minimal frame using the expected raw ONS column names."""
+    """Create a minimal DataFrame using the expected raw ONS column names."""
     return pd.DataFrame(
         {
-            "Period": [f"{period_prefix} Q{i+1}" for i in range(rows)],
+            "Period": [f"{period_prefix} Q{i + 1}" for i in range(rows)],
             "Geography": ["Europe", "North America", "Other Countries"],
             "Purpose": ["Holiday", "Business", "VFR"],
             "Transport": ["Air", "Sea", "Tunnel"],
@@ -23,11 +23,14 @@ def _make_sample_frame(period_prefix: str, rows: int = 3) -> pd.DataFrame:
 
 
 def _write_excel_with_sheets(path: Path, sheets: dict[str, pd.DataFrame]) -> None:
-    """Write a multi-sheet Excel file in memory-safe manner."""
+    """Write a multi-sheet Excel file in a memory-safe manner."""
     with pd.ExcelWriter(path, engine="xlsxwriter") as writer:
         for name, df in sheets.items():
-            # Intentionally include an extra header row to mimic real-world quirks
-            header_row = pd.DataFrame([["Header row"] + [""] * (df.shape[1] - 1)], columns=df.columns)
+            # Include an extra header row to mimic real-world quirks
+            header_row = pd.DataFrame(
+                [["Header row"] + [""] * (df.shape[1] - 1)],
+                columns=df.columns,
+            )
             combined = pd.concat([header_row, df], ignore_index=True)
             combined.to_excel(writer, sheet_name=name, index=False)
 
@@ -52,7 +55,6 @@ def sample_excel(tmp_path: Path) -> Path:
 def test_load_concatenates_all_sheets_and_preserves_columns(sample_excel: Path):
     """Loading with sheet_name=None should concatenate all sheets and retain expected columns."""
     df = load_excel(sample_excel, {"sheet_name": None})
-    # Expected columns present
     expected = [
         "Period",
         "Geography",
@@ -63,7 +65,6 @@ def test_load_concatenates_all_sheets_and_preserves_columns(sample_excel: Path):
         "Spend (£m)",
     ]
     assert list(df.columns) == expected
-    # Row count equals sum across sheets minus any artificial header rows handled in loader
     # We wrote 6 sheets with 3 rows each; total 18 records expected after header handling.
     assert len(df) == 6 * 3
     # Basic type expectations (Excel numeric -> numeric dtypes)
