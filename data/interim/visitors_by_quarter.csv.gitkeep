@@ -1,0 +1,89 @@
+Generating visitors_by_quarter.csv
+Steps using the existing pipeline
+Run the pipeline:
+
+bash
+python src/pipeline.py
+Expected output location: data/interim/visitors_by_quarter.csv
+
+Minimal standalone script (if you want a direct entry point)
+python
+# scripts/make_visitors_by_quarter.py
+import pandas as pd
+from pathlib import Path
+
+RAW = Path("data/raw/overseas-visitors-to-britain-2024.xlsx")
+OUT = Path("data/interim/visitors_by_quarter.csv")
+
+# 1) Load the relevant sheet/range
+# Adjust sheet_name and header rows to match the ONS layout.
+df = pd.read_excel(RAW, sheet_name=0)
+
+# 2) Select and rename columns you need
+# Example placeholders—replace with the actual column names from the file.
+df = df.rename(columns={
+    "Period": "period",
+    "Visits (thousands)": "visits_thousands"
+})
+
+# 3) Normalize period to a quarterly key
+# Expecting entries like "2019 Q1", "2024 Q4".
+# Create a sortable period index.
+qmap = {"Q1": 1, "Q2": 2, "Q3": 3, "Q4": 4}
+period_parts = df["period"].str.extract(r"(?P<year>\d{4})\s+Q(?P<q>\d)")
+df["year"] = period_parts["year"].astype(int)
+df["quarter"] = period_parts["q"].astype(int)
+
+# Optional: a canonical period label
+df["period_q"] = df["year"].astype(str) + " Q" + df["quarter"].astype(str)
+
+# 4) Clean visits (coerce to numeric, drop non-finite)
+df["visits_thousands"] = pd.to_numeric(df["visits_thousands"], errors="coerce")
+df = df.dropna(subset=["visits_thousands", "year", "quarter"])
+
+# 5) Aggregate to quarter (sum across categories if present)
+visitors_by_quarter = (
+    df.groupby(["year", "quarter"], as_index=False)["visits_thousands"]
+      .sum()
+      .sort_values(["year", "quarter"])
+)
+
+# Optional: include the label
+visitors_by_quarter["period_q"] = visitors_by_quarter["year"].astype(str) + " Q" + visitors_by_quarter["quarter"].astype(str)
+
+# 6) Write CSV
+OUT.parent.mkdir(parents=True, exist_ok=True)
+visitors_by_quarter.to_csv(OUT, index=False)
+print(f"Wrote {OUT}")
+Run it with:
+
+bash
+python scripts/make_visitors_by_quarter.py
+Using your src modules (preferred if they already exist)
+python
+# scripts/make_visitors_by_quarter.py
+from pathlib import Path
+import pandas as pd
+from src.data.load import load_excel  # e.g., a helper you may have
+from src.data.clean import standardize_columns, coerce_numeric
+from src.data.transform import normalize_quarters, aggregate_quarterly
+from src.config import RAW_DATA_PATH, INTERIM_PATH
+
+raw_file = Path(RAW_DATA_PATH) / "overseas-visitors-to-britain-2024.xlsx"
+out_file = Path(INTERIM_PATH) / "visitors_by_quarter.csv"
+
+df = load_excel(raw_file)                          # load
+df = standardize_columns(df)                       # clean
+df = coerce_numeric(df, cols=["visits_thousands"]) # clean
+df = normalize_quarters(df, src_col="period")      # transform
+result = aggregate_quarterly(df, value="visits_thousands")  # transform
+
+out_file.parent.mkdir(parents=True, exist_ok=True)
+result.to_csv(out_file, index=False)
+print(f"Wrote {out_file}")
+Verification checklist
+Columns present: year, quarter, visits_thousands (and optionally period_q).
+
+Quarter coverage: continuous from Q1 2019 to Q4 2024 if available in the source.
+
+Values sanity: non-negative, totals align with raw table when summed by quarter.
