@@ -3,175 +3,144 @@ import numpy as np
 import pytest
 
 from src.data.transform import (
-    aggregate_visits_by_quarter,
-    aggregate_expenditure_by_purpose,
-    normalise_period,
+    harmonise_columns,
+    normalise_quarter_label,
+    annotate_coverage,
+    to_tidy,
+    aggregate,
+    VALUE_COLS_DEFAULT
 )
 
 
-def test_normalise_period_parses_quarter_strings():
+def test_normalise_quarter_label_parses_quarter_strings():
     periods = ["2019 Q1", "2020 Q4", "2024 Q2", "2023 Q3"]
     expected = ["2019Q1", "2020Q4", "2024Q2", "2023Q3"]
 
-    result = [normalise_period(p) for p in periods]
+    result = [normalise_quarter_label(p) for p in periods]
     assert result == expected
 
 
-def test_normalise_period_handles_whitespace_and_case():
+def test_normalise_quarter_label_handles_whitespace_and_case():
     periods = [" 2019 q1 ", "2020   Q2", "\t2021 q3"]
     expected = ["2019Q1", "2020Q2", "2021Q3"]
 
-    result = [normalise_period(p) for p in periods]
+    result = [normalise_quarter_label(p) for p in periods]
     assert result == expected
 
 
-def test_aggregate_visits_by_quarter_sums_correctly():
-    df = pd.DataFrame(
-        {
-            "period": ["2019 Q1", "2019 Q1", "2019 Q2", "2024 Q1"],
-            "geography_group": ["Europe", "Europe", "North America", "Other Countries"],
-            "visits_thousands": [10.0, 5.0, 3.0, 2.0],
-        }
-    )
-
-    agg = aggregate_visits_by_quarter(df)
-
-    # Expect periods normalised and grouped sums
-    expected = pd.DataFrame(
-        {
-            "period": ["2019Q1", "2019Q2", "2024Q1"],
-            "geography_group": ["Europe", "North America", "Other Countries"],
-            "visits_thousands": [15.0, 3.0, 2.0],
-        }
-    )
-
-    # Sort for deterministic comparison
-    agg_sorted = agg.sort_values(["period", "geography_group"]).reset_index(drop=True)
-    expected_sorted = expected.sort_values(["period", "geography_group"]).reset_index(drop=True)
-
-    pd.testing.assert_frame_equal(agg_sorted, expected_sorted)
+def test_harmonise_columns_standardises_column_names():
+    df = pd.DataFrame({
+        "Quarter": ["2019Q1", "2019Q2"],
+        "GEOGRAPHY": ["Europe", "North America"],
+        "Visit Count": [100, 200],
+        "Expenditure_Millions": [50.0, 75.0]
+    })
+    
+    result = harmonise_columns(df)
+    
+    expected_columns = ["quarter", "geography", "visits", "expenditure_millions"]
+    assert all(col in result.columns for col in expected_columns)
 
 
-def test_aggregate_visits_by_quarter_ignores_non_numeric_and_nans():
-    df = pd.DataFrame(
-        {
-            "period": ["2019 Q1", "2019 Q1", "2019 Q1", "2019 Q2"],
-            "geography_group": ["Europe", "Europe", "Europe", "Europe"],
-            "visits_thousands": [10.0, np.nan, "not a number", 4.0],
-        }
-    )
-
-    agg = aggregate_visits_by_quarter(df)
-
-    # "not a number" should be coerced/ignored; NaN should be treated as missing
-    expected = pd.DataFrame(
-        {
-            "period": ["2019Q1", "2019Q2"],
-            "geography_group": ["Europe", "Europe"],
-            "visits_thousands": [10.0, 4.0],
-        }
-    ).sort_values(["period"]).reset_index(drop=True)
-
-    agg_sorted = agg.sort_values(["period"]).reset_index(drop=True)
-    pd.testing.assert_frame_equal(agg_sorted, expected)
+def test_annotate_coverage_labels_correctly():
+    df = pd.DataFrame({
+        "quarter": ["2019Q1", "2023Q4", "2024Q1", "2024Q2"]
+    })
+    
+    result = annotate_coverage(df)
+    
+    expected_coverage = ["United Kingdom", "United Kingdom", "Great Britain", "Great Britain"]
+    expected_break = [False, False, True, True]
+    
+    assert list(result["coverage"]) == expected_coverage
+    assert list(result["method_break"]) == expected_break
 
 
-def test_aggregate_expenditure_by_purpose_sums_correctly():
-    df = pd.DataFrame(
-        {
-            "period": ["2019 Q1", "2019 Q1", "2019 Q2", "2024 Q4"],
-            "purpose": ["Holiday", "Business", "Holiday", "VFR"],
-            "expenditure_millions": [100.0, 50.0, 20.0, 5.0],
-        }
-    )
-
-    agg = aggregate_expenditure_by_purpose(df)
-
-    expected = pd.DataFrame(
-        {
-            "period": ["2019Q1", "2019Q1", "2019Q2", "2024Q4"],
-            "purpose": ["Business", "Holiday", "Holiday", "VFR"],
-            "expenditure_millions": [50.0, 100.0, 20.0, 5.0],
-        }
-    )
-
-    agg_sorted = agg.sort_values(["period", "purpose"]).reset_index(drop=True)
-    expected_sorted = expected.sort_values(["period", "purpose"]).reset_index(drop=True)
-
-    pd.testing.assert_frame_equal(agg_sorted, expected_sorted)
+def test_to_tidy_converts_wide_to_long_format():
+    wide_df = pd.DataFrame({
+        "quarter": ["2019Q1", "2019Q2"],
+        "geography": ["Europe", "North America"],
+        "purpose": ["Holiday", "Business"],
+        "transport": ["Air", "Air"],
+        "visits": [100.0, 200.0],
+        "expenditure_millions": [50.0, 75.0],
+        "nights": [500.0, 300.0],
+        "coverage": ["United Kingdom", "United Kingdom"],
+        "method_break": [False, False]
+    })
+    
+    tidy_df = to_tidy(wide_df)
+    
+    assert "metric" in tidy_df.columns
+    assert "value" in tidy_df.columns
+    assert len(tidy_df) == len(wide_df) * len(VALUE_COLS_DEFAULT)
 
 
-def test_expenditure_aggregation_ignores_invalid_values():
-    df = pd.DataFrame(
-        {
-            "period": ["2019 Q1", "2019 Q1", "2019 Q2"],
-            "purpose": ["Holiday", "Holiday", "Business"],
-            "expenditure_millions": ["NaN", 30.0, None],
-        }
-    )
-
-    agg = aggregate_expenditure_by_purpose(df)
-
-    expected = pd.DataFrame(
-        {
-            "period": ["2019Q1"],
-            "purpose": ["Holiday"],
-            "expenditure_millions": [30.0],
-        }
-    ).sort_values(["period", "purpose"]).reset_index(drop=True)
-
-    agg_sorted = agg.sort_values(["period", "purpose"]).reset_index(drop=True)
-    pd.testing.assert_frame_equal(agg_sorted, expected)
-
-
-def test_period_sort_order_is_chronological_in_outputs():
-    df = pd.DataFrame(
-        {
-            "period": ["2020 Q4", "2019 Q1", "2019 Q3", "2024 Q1", "2019 Q2"],
-            "geography_group": ["Europe"] * 5,
-            "visits_thousands": [2, 5, 7, 1, 6],
-        }
-    )
-
-    agg = aggregate_visits_by_quarter(df)
-
-    # Expected chronological order after normalisation: 2019Q1, 2019Q2, 2019Q3, 2020Q4, 2024Q1
-    expected_period_order = ["2019Q1", "2019Q2", "2019Q3", "2020Q4", "2024Q1"]
-    assert list(agg["period"]) == expected_period_order
+def test_aggregate_produces_correct_views():
+    tidy_df = pd.DataFrame({
+        "quarter": ["2019Q1", "2019Q1", "2019Q2", "2019Q2"],
+        "geography": ["Europe", "Europe", "North America", "North America"],
+        "purpose": ["Holiday", "Business", "Holiday", "Business"],
+        "transport": ["Air", "Air", "Air", "Air"],
+        "coverage": ["United Kingdom", "United Kingdom", "United Kingdom", "United Kingdom"],
+        "method_break": [False, False, False, False],
+        "metric": ["visits", "visits", "visits", "visits"],
+        "value": [100.0, 50.0, 200.0, 75.0]
+    })
+    
+    result = aggregate(tidy_df)
+    
+    assert "region" in result
+    assert "purpose" in result
+    assert "transport" in result
+    assert len(result["region"]) > 0
+    assert len(result["purpose"]) > 0
+    assert len(result["transport"]) > 0
 
 
-def test_group_columns_and_dtypes_are_preserved():
-    df = pd.DataFrame(
-        {
-            "period": ["2019 Q1", "2019 Q1"],
-            "geography_group": ["Europe", "Europe"],
-            "visits_thousands": [1.5, 2.5],
-        }
-    )
+def test_aggregate_sums_values_correctly():
+    tidy_df = pd.DataFrame({
+        "quarter": ["2019Q1", "2019Q1", "2019Q1"],
+        "geography": ["Europe", "Europe", "Europe"],
+        "purpose": ["Holiday", "Business", "Holiday"],
+        "transport": ["Air", "Air", "Air"],
+        "coverage": ["United Kingdom", "United Kingdom", "United Kingdom"],
+        "method_break": [False, False, False],
+        "metric": ["visits", "visits", "visits"],
+        "value": [100.0, 50.0, 25.0]
+    })
+    
+    result = aggregate(tidy_df)
+    
+    europe_visits = result["region"][
+        (result["region"]["geography"] == "Europe") & 
+        (result["region"]["metric"] == "visits")
+    ]["value"].iloc[0]
+    
+    assert europe_visits == 175.0
 
-    agg = aggregate_visits_by_quarter(df)
 
-    assert list(agg.columns) == ["period", "geography_group", "visits_thousands"]
-    assert agg["period"].dtype == object
-    assert agg["geography_group"].dtype == object
-    assert np.issubdtype(agg["visits_thousands"].dtype, np.number)
-
-
-def test_outputs_exclude_empty_groups_after_aggregation():
-    df = pd.DataFrame(
-        {
-            "period": ["2019 Q1", "2019 Q2"],
-            "geography_group": ["Europe", "North America"],
-            "visits_thousands": [0.0, 0.0],
-        }
-    )
-
-    agg = aggregate_visits_by_quarter(df)
-
-    # If all values are zero, groups should still exist; if rows are missing after cleaning, they should not.
-    # Here, zeros are legitimate values, so both rows should be present.
-    assert len(agg) == 2
-    assert set(agg["geography_group"]) == {"Europe", "North America"}
+def test_value_column_numeric_coercion():
+    df = pd.DataFrame({
+        "quarter": ["2019Q1", "2019Q2"],
+        "geography": ["Europe", "North America"],
+        "purpose": ["Holiday", "Business"],
+        "transport": ["Air", "Air"],
+        "visits": ["100.0", "not_a_number"],
+        "expenditure_millions": [50.0, 75.0],
+        "nights": [500.0, 300.0]
+    })
+    
+    df = harmonise_columns(df)
+    df["quarter"] = df["quarter"].map(normalise_quarter_label)
+    df = annotate_coverage(df)
+    
+    for col in VALUE_COLS_DEFAULT:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    
+    assert pd.isna(df["visits"].iloc[1])
+    assert df["expenditure_millions"].dtype == float
 
 
 @pytest.mark.parametrize(
@@ -181,7 +150,31 @@ def test_outputs_exclude_empty_groups_after_aggregation():
         ("2019Q1", "2019Q1"),
         ("2019 - Q1", "2019Q1"),
         (" Q3 2020 ", "2020Q3"),
+        ("2024-01", "2024Q1"),
+        ("2023-12-15", "2023Q4"),
     ],
 )
-def test_normalise_period_accepts_varied_input_formats(raw, expected):
-    assert normalise_period(raw) == expected
+def test_normalise_quarter_label_accepts_varied_input_formats(raw, expected):
+    assert normalise_quarter_label(raw) == expected
+
+
+def test_output_structure_and_columns_preserved():
+    wide_df = pd.DataFrame({
+        "quarter": ["2019Q1", "2019Q2"],
+        "geography": ["Europe", "North America"],
+        "purpose": ["Holiday", "Business"],
+        "transport": ["Air", "Air"],
+        "visits": [100.0, 200.0],
+        "expenditure_millions": [50.0, 75.0],
+        "nights": [500.0, 300.0]
+    })
+    
+    wide_df = harmonise_columns(wide_df)
+    wide_df["quarter"] = wide_df["quarter"].map(normalise_quarter_label)
+    wide_df = annotate_coverage(wide_df)
+    tidy_df = to_tidy(wide_df)
+    
+    expected_columns = ["quarter", "geography", "purpose", "transport", "coverage", "method_break", "metric", "value"]
+    assert all(col in tidy_df.columns for col in expected_columns)
+    assert tidy_df["quarter"].dtype == object
+    assert tidy_df["value"].dtype == float
