@@ -1,5 +1,9 @@
 from pathlib import Path
 import pandas as pd
+
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
 from src.data.load import load_table_1
 from src.data.clean import clean, DEFAULT_INPUT, DEFAULT_OUTPUT
 from src.data.transform import harmonise_columns, normalise_quarter_label, annotate_coverage
