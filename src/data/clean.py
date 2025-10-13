@@ -1,8 +1,9 @@
 """
 Clean and standardise overseas visitors dataset.
 
-Normalises column names and types, derives quarterly periods,
-harmonises categorical fields, and returns a cleaned DataFrame.
+Normalises column names and types, derives quarterly period labels,
+harmonises categorical fields, and returns a cleaned DataFrame with a
+normalised schema suitable for downstream processing and tests.
 Optional file-based helpers are provided for reading raw Excel and writing Parquet.
 """
 
@@ -45,25 +46,31 @@ def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df.columns = [_to_snake(c) for c in df.columns]
 
-    # Common renames into a consistent schema if present
+    # Canonical renames into the expected schema
     rename_map: Dict[str, str] = {
-        "year": "year",
+        # temporal
         "qtr": "quarter",
         "quarter": "quarter",
-        "period": "period",
-        "visits": "visits",
-        "number_of_visits": "visits",
+        "year": "year",
+        "period": "period",  # may be parsed to year/quarter then rebuilt
+
+        # metrics (expected: visits_thousands, expenditure_millions, nights_thousands)
+        "visits": "visits_thousands",
+        "number_of_visits": "visits_thousands",
+        "number_of_visits_thousands": "visits_thousands",
         "expenditure_gbp_millions": "expenditure_millions",
         "expenditure_millions": "expenditure_millions",
         "expenditure_gbp": "expenditure_millions",  # will be coerced later
-        "nights": "nights",
-        "number_of_nights": "nights",
-        "purpose": "purpose",
+        "nights": "nights_thousands",
+        "number_of_nights": "nights_thousands",
+        "nights_stayed_thousands": "nights_thousands",
+
+        # categories
         "purpose_of_visit": "purpose",
         "mode_of_transport": "transport",
         "transport_mode": "transport",
-        "region": "region",
-        "geographic_region": "region",
+        "region": "geography",
+        "geographic_region": "geography",
         "country_of_residence": "country",
         "residence_country": "country",
         "uk_region_visited": "uk_region",
@@ -82,7 +89,8 @@ def _coerce_numerics(df: pd.DataFrame) -> pd.DataFrame:
     def to_numeric(series: pd.Series) -> pd.Series:
         return pd.to_numeric(series, errors="coerce").astype("Float64")
 
-    for col in ["visits", "expenditure_millions", "nights"]:
+    # Coerce metrics to numeric with expected names
+    for col in ["visits_thousands", "expenditure_millions", "nights_thousands"]:
         if col in df.columns:
             df[col] = to_numeric(df[col])
 
@@ -96,32 +104,28 @@ def _coerce_numerics(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _derive_quarter(df: pd.DataFrame) -> pd.DataFrame:
+def _derive_quarter_and_period(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
     # Try existing year + quarter codes
     if "year" in df.columns and "quarter" in df.columns:
-        # Normalise quarter values like "Q1", 1, "1" → "Q1"
         q = df["quarter"].astype(str).str.upper().str.extract(r"(\d)").squeeze()
         df["quarter"] = "Q" + q.fillna("").replace("", np.nan)
-    elif "period" in df.columns:
-        # Attempt to parse strings like "2024 Q1" or "Q1 2024"
+
+    # If only a free-form period is present, parse year and quarter from it
+    if "period" in df.columns and (("year" not in df.columns) or ("quarter" not in df.columns)):
         period = df["period"].astype(str).str.upper()
         year = period.str.extract(r"(20\d{2})", expand=False)
         q = period.str.extract(r"Q([1-4])", expand=False)
         df["year"] = pd.to_numeric(year, errors="coerce")
         df["quarter"] = q.where(q.isin(["1", "2", "3", "4"]), np.nan).map(lambda x: f"Q{x}" if pd.notna(x) else np.nan)
 
-    # Construct pandas Period for quarter if possible
+    # Build the expected string label 'period' as "Q# YYYY"
     if "year" in df.columns and "quarter" in df.columns:
         valid_q = df["quarter"].isin(["Q1", "Q2", "Q3", "Q4"])
-        df.loc[valid_q, "period_q"] = (
-            df.loc[valid_q, ["year", "quarter"]]
-            .astype({"year": "Int64"})
-            .apply(lambda r: pd.Period(f"{int(r['year'])}{r['quarter']}", freq="Q"), axis=1)
-        )
+        df.loc[valid_q, "period"] = df.loc[valid_q, "quarter"] + " " + df.loc[valid_q, "year"].astype("Int64").astype(str)
     else:
-        df["period_q"] = pd.NaT
+        df["period"] = pd.NA
 
     return df
 
@@ -136,8 +140,9 @@ def _normalise_categories(df: pd.DataFrame) -> pd.DataFrame:
             "holiday": "Holiday",
             "leisure": "Holiday",
             "business": "Business",
-            "vfr": "Visiting friends or relatives",
-            "visiting friends or relatives": "Visiting friends or relatives",
+            "vfr": "Visiting friends and relatives",
+            "visiting friends and relatives": "Visiting friends and relatives",
+            "visiting friends or relatives": "Visiting friends and relatives",
             "misc": "Miscellaneous",
             "miscellaneous": "Miscellaneous",
             "study": "Study",
@@ -156,28 +161,65 @@ def _normalise_categories(df: pd.DataFrame) -> pd.DataFrame:
         }
         df["transport"] = std.map(lambda x: transport_map.get(x, x.title()))
 
-    # Region (macro)
-    if "region" in df.columns:
-        std = df["region"].astype(str).str.strip().str.lower()
-        region_map = {
+    # Geography (macro regions)
+    if "geography" in df.columns:
+        std = df["geography"].astype(str).str.strip().str.lower()
+        geography_map = {
             "europe": "Europe",
             "north america": "North America",
             "other countries": "Other Countries",
             "other": "Other Countries",
         }
-        df["region"] = std.map(lambda x: region_map.get(x, x.title()))
+        df["geography"] = std.map(lambda x: geography_map.get(x, x.title()))
 
     return df
 
 
 def _add_coverage_flag(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    # Coverage is UK up to 2023; GB from 2024 onwards
+    # Coverage is United Kingdom up to 2023; Great Britain from 2024 onwards
     if "year" in df.columns:
         df["coverage"] = np.where(df["year"].fillna(0) >= 2024, "Great Britain", "United Kingdom")
     else:
         df["coverage"] = pd.NA
     return df
+
+
+def _finalise_schema(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Produce the final DataFrame with the exact columns expected by tests:
+    ['period', 'coverage', 'geography', 'purpose', 'transport',
+     'visits_thousands', 'expenditure_millions', 'nights_thousands']
+    """
+    df = df.copy()
+
+    # Ensure columns exist even if absent in input
+    for col in [
+        "period",
+        "coverage",
+        "geography",
+        "purpose",
+        "transport",
+        "visits_thousands",
+        "expenditure_millions",
+        "nights_thousands",
+    ]:
+        if col not in df.columns:
+            df[col] = pd.NA
+
+    final_order = [
+        "period",
+        "coverage",
+        "geography",
+        "purpose",
+        "transport",
+        "visits_thousands",
+        "expenditure_millions",
+        "nights_thousands",
+    ]
+
+    # Return only the required columns in the defined order
+    return df[final_order]
 
 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
@@ -191,8 +233,8 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
     logging.info("Coercing numeric fields.")
     df = _coerce_numerics(df)
 
-    logging.info("Deriving quarterly periods.")
-    df = _derive_quarter(df)
+    logging.info("Deriving quarter and period label.")
+    df = _derive_quarter_and_period(df)
 
     logging.info("Normalising categorical values.")
     df = _normalise_categories(df)
@@ -200,23 +242,8 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
     logging.info("Adding coverage flag.")
     df = _add_coverage_flag(df)
 
-    # Basic ordering for readability
-    preferred_order = [
-        "year",
-        "quarter",
-        "period_q",
-        "coverage",
-        "region",
-        "country",
-        "uk_region",
-        "purpose",
-        "transport",
-        "visits",
-        "expenditure_millions",
-        "nights",
-    ]
-    cols = [c for c in preferred_order if c in df.columns] + [c for c in df.columns if c not in preferred_order]
-    df = df[cols]
+    logging.info("Finalising schema.")
+    df = _finalise_schema(df)
 
     logging.info("Cleaning complete.")
     return df
