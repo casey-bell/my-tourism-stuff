@@ -1,16 +1,9 @@
-"""
-Validation utilities for tourism data.
-
-This module enforces schema, type, range, and coverage checks to ensure
-analysis-ready datasets are consistent and trustworthy across quarters
-and breakdown dimensions.
-"""
-
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
-from typing import Iterable, List, Optional, Sequence, Set, Dict
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 import pandas as pd
 
@@ -18,22 +11,11 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
-# ---- Reference values and expected domains ----
+# ---- Exceptions and issue collection ----
 
-VALID_GEOGRAPHY_GROUPS: Set[str] = {"North America", "Europe", "Other Countries"}
-VALID_PURPOSES: Set[str] = {"Holiday", "Business", "VFR", "Miscellaneous"}
-VALID_TRANSPORT_MODES: Set[str] = {"Air", "Sea", "Tunnel"}
-
-NON_NEGATIVE_COLUMNS: Set[str] = {
-    "visits_thousands",
-    "expenditure_millions",
-    "nights_thousands",
-}
-
-# Quarters: Q1 2019 to Q4 2024 inclusive
-VALID_QUARTERS: List[str] = [
-    f"Q{q} {y}" for y in range(2019, 2025) for q in range(1, 5)
-]
+class ValidationError(Exception):
+    """Raised when validation fails with one or more errors."""
+    pass
 
 
 @dataclass
@@ -61,275 +43,219 @@ class ValidationResult:
     def warnings(self) -> List[ValidationIssue]:
         return [i for i in self.issues if i.level == "warning"]
 
+    def add_error(self, message: str, context: Optional[Dict[str, str]] = None) -> None:
+        self.issues.append(ValidationIssue(level="error", message=message, context=context))
+
+    def add_warning(self, message: str, context: Optional[Dict[str, str]] = None) -> None:
+        self.issues.append(ValidationIssue(level="warning", message=message, context=context))
+
     def raise_for_errors(self) -> None:
         if self.errors:
             messages = "; ".join(i.message for i in self.errors)
             raise ValidationError(messages)
 
-    def log(self) -> None:
-        for issue in self.issues:
-            if issue.level == "error":
-                logger.error(issue.message)
-            else:
-                logger.warning(issue.message)
+    def to_report(self) -> Dict[str, List[str]]:
+        return {
+            "errors": [i.message for i in self.errors],
+            "warnings": [i.message for i in self.warnings],
+        }
 
 
-class ValidationError(Exception):
-    """Raised when validation fails with one or more errors."""
-    pass
+# ---- Helpers ----
+
+_PERIOD_RE = re.compile(r"^\d{4}-Q[1-4]$")
 
 
-# ---- Core validation functions ----
+def _parse_period(s: str) -> Optional[Tuple[int, int]]:
+    """Parse 'YYYY-Qn' into (year, quarter). Return None if invalid."""
+    if not isinstance(s, str):
+        return None
+    if not _PERIOD_RE.match(s):
+        return None
+    year = int(s[:4])
+    quarter = int(s[-1])
+    return year, quarter
 
-def validate_required_columns(
-    df: pd.DataFrame,
-    required: Sequence[str],
-    result: Optional[ValidationResult] = None,
-) -> ValidationResult:
-    res = result or ValidationResult()
+
+def _period_sort_key(s: str) -> Tuple[int, int]:
+    p = _parse_period(s)
+    # Put unparsable periods first to ensure they are caught by format checks
+    return (-1, -1) if p is None else p
+
+
+def _check_required_columns(df: pd.DataFrame, required: Sequence[str], res: ValidationResult) -> None:
     missing = [c for c in required if c not in df.columns]
     if missing:
-        res.issues.append(
-            ValidationIssue(
-                level="error",
-                message=f"Missing required columns: {', '.join(missing)}",
-            )
-        )
-    return res
+        res.add_error(f"Missing required columns: {', '.join(missing)}")
 
 
-def validate_no_extra_columns(
-    df: pd.DataFrame,
-    allowed: Sequence[str],
-    result: Optional[ValidationResult] = None,
-) -> ValidationResult:
-    res = result or ValidationResult()
-    extras = [c for c in df.columns if c not in allowed]
-    if extras:
-        res.issues.append(
-            ValidationIssue(
-                level="warning",
-                message=f"Unexpected columns present: {', '.join(extras)}",
-            )
-        )
-    return res
+def _check_empty(df: pd.DataFrame, res: ValidationResult) -> None:
+    if df.shape[0] == 0:
+        res.add_error("Dataset is empty (no rows).")
 
 
-def validate_quarters(
-    df: pd.DataFrame,
-    quarter_column: str = "quarter",
-    result: Optional[ValidationResult] = None,
-) -> ValidationResult:
-    res = result or ValidationResult()
-    if quarter_column not in df.columns:
-        res.issues.append(
-            ValidationIssue(level="error", message=f"Column '{quarter_column}' not found")
-        )
-        return res
-
-    # Check domain membership
-    invalid = sorted(set(df[quarter_column]) - set(VALID_QUARTERS))
-    if invalid:
-        res.issues.append(
-            ValidationIssue(
-                level="error",
-                message=f"Invalid quarter values: {', '.join(map(str, invalid))}",
-            )
-        )
-
-    # Check continuity coverage if quarters are expected to be complete
-    # Only warn: some breakdown tables may not cover all quarters.
-    present = sorted(set(df[quarter_column]), key=lambda s: (int(s.split()[1]), int(s[1])))
-    missing = [q for q in VALID_QUARTERS if q not in present]
-    if missing:
-        res.issues.append(
-            ValidationIssue(
-                level="warning",
-                message=f"Missing quarters in dataset: {', '.join(missing)}",
-            )
-        )
-    return res
+def _is_boolean_series(s: pd.Series) -> bool:
+    # Accept actual booleans only; strings like "True" are not valid
+    return s.dropna().map(lambda x: isinstance(x, bool)).all()
 
 
-def validate_domains(
-    df: pd.DataFrame,
-    column: str,
-    allowed_values: Iterable[str],
-    strict: bool = True,
-    result: Optional[ValidationResult] = None,
-) -> ValidationResult:
-    res = result or ValidationResult()
-    if column not in df.columns:
-        res.issues.append(
-            ValidationIssue(level="warning", message=f"Column '{column}' not found")
-        )
-        return res
-
-    allowed = set(allowed_values)
-    values = set(df[column].dropna().astype(str))
-    unexpected = sorted(values - allowed)
-    if unexpected:
-        level = "error" if strict else "warning"
-        res.issues.append(
-            ValidationIssue(
-                level=level,
-                message=f"Unexpected values in '{column}': {', '.join(unexpected)}",
-            )
-        )
-    return res
+def _is_numeric_series(s: pd.Series) -> bool:
+    # Coercion test: non-numeric entries become NaN; detect any such cases
+    coerced = pd.to_numeric(s, errors="coerce")
+    return not ((coerced.isna()) & (s.notna())).any()
 
 
-def validate_non_negative(
-    df: pd.DataFrame,
-    columns: Iterable[str] = NON_NEGATIVE_COLUMNS,
-    result: Optional[ValidationResult] = None,
-) -> ValidationResult:
-    res = result or ValidationResult()
-    for col in columns:
+def _check_types(df: pd.DataFrame, schema_cols: Dict[str, Dict], res: ValidationResult) -> None:
+    for col, spec in schema_cols.items():
         if col not in df.columns:
-            res.issues.append(
-                ValidationIssue(level="error", message=f"Column '{col}' not found")
-            )
+            # Requiredness is handled separately; skip type checks for truly missing columns
             continue
-        negatives = df[df[col] < 0]
-        if not negatives.empty:
-            count = int(negatives.shape[0])
-            res.issues.append(
-                ValidationIssue(
-                    level="error",
-                    message=f"Negative values found in '{col}' (rows: {count})",
-                )
-            )
-    return res
+
+        t = spec.get("type")
+        if t == "number":
+            if not _is_numeric_series(df[col]):
+                res.add_error(f"Type validation failed for '{col}': expected number.")
+            # Non-negativity via "min" in schema
+            if "min" in spec:
+                try:
+                    negatives = df[pd.to_numeric(df[col], errors="coerce") < spec["min"]]
+                    if not negatives.empty:
+                        res.add_error(f"Non-negative constraint violated in '{col}' (rows: {int(negatives.shape[0])}).")
+                except Exception:
+                    # If coercion fails, type error will already be reported
+                    pass
+
+        elif t == "boolean":
+            if not _is_boolean_series(df[col]):
+                res.add_error(f"Type validation failed for '{col}': expected boolean.")
+
+        elif t == "string":
+            # Strings are permissive; if a format is provided, enforce regex
+            fmt = spec.get("format")
+            if fmt is not None:
+                pattern = re.compile(fmt)
+                bad = df[col].dropna().astype(str).map(lambda x: pattern.match(x) is None)
+                if bad.any():
+                    res.add_error(f"Format validation failed for '{col}': regex '{fmt}' not matched.")
+
+        # Other types can be added as needed
 
 
-def validate_coverage_break(
-    df: pd.DataFrame,
-    year_break: int = 2024,
-    geography_column: str = "geography",
-    quarter_column: str = "quarter",
-    result: Optional[ValidationResult] = None,
-) -> ValidationResult:
-    """
-    Flags rows at or after the coverage break year that include Northern Ireland,
-    reflecting the methodological change to Great Britain-only coverage from 2024.
-    """
-    res = result or ValidationResult()
-
-    missing_cols = [c for c in (geography_column, quarter_column) if c not in df.columns]
-    if missing_cols:
-        res.issues.append(
-            ValidationIssue(
-                level="warning",
-                message=f"Coverage check skipped; columns missing: {', '.join(missing_cols)}",
-            )
+def _check_unique_keys(df: pd.DataFrame, unique_keys: Sequence[str], res: ValidationResult) -> None:
+    if not unique_keys:
+        return
+    for key in unique_keys:
+        if key not in df.columns:
+            res.add_error(f"Missing unique key column '{key}'.")
+            return
+    dup_mask = df.duplicated(subset=list(unique_keys), keep=False)
+    if dup_mask.any():
+        # Mention each key to satisfy test expectations
+        res.add_error(
+            "Duplicate rows found across unique key(s): " + ", ".join(unique_keys)
         )
-        return res
-
-    # Extract year from quarter labels like "Q1 2024"
-    def _year(q: str) -> Optional[int]:
-        try:
-            return int(q.split()[-1])
-        except Exception:
-            return None
-
-    mask_break = df[quarter_column].apply(_year).fillna(0) >= year_break
-    mask_ni = df[geography_column].astype(str).str.contains("Northern Ireland", case=False, na=False)
-    offending = df[mask_break & mask_ni]
-
-    if not offending.empty:
-        res.issues.append(
-            ValidationIssue(
-                level="error",
-                message=(
-                    "Rows at or after 2024 include Northern Ireland despite Great Britain-only coverage. "
-                    f"Affected rows: {offending.shape[0]}"
-                ),
-            )
-        )
-    return res
 
 
-def validate_schema_and_types(
-    df: pd.DataFrame,
-    required_columns: Sequence[str],
-    numeric_columns: Sequence[str] = (),
-    result: Optional[ValidationResult] = None,
-) -> ValidationResult:
+def _check_period_continuity(df: pd.DataFrame, period_col: str, res: ValidationResult) -> None:
+    if period_col not in df.columns:
+        res.add_error(f"Missing period column '{period_col}'.")
+        return
+
+    periods = df[period_col].dropna().astype(str).tolist()
+    # If any period fails format, continuity will be noisy; rely on format check to flag those
+    parsed = [_parse_period(p) for p in periods if _PERIOD_RE.match(p)]
+    if not parsed:
+        # If nothing parses, continuity cannot be determined; leave to format/type errors
+        return
+
+    # De-duplicate and sort
+    uniq = sorted(set(parsed))
+    # Walk expected consecutive sequence
+    def next_period(y: int, q: int) -> Tuple[int, int]:
+        return (y + 1, 1) if q == 4 else (y, q + 1)
+
+    gaps: List[str] = []
+    for i in range(len(uniq) - 1):
+        y, q = uniq[i]
+        ny, nq = next_period(y, q)
+        ay, aq = uniq[i + 1]
+        if (ny, nq) != (ay, aq):
+            # Report gap between expected next and actual next
+            gaps.append(f"missing quarter between {y}-Q{q} and {ay}-Q{aq}")
+
+    if gaps:
+        res.add_error("Period continuity gap detected: " + "; ".join(gaps))
+
+
+def _check_gb_only_from_2024(df: pd.DataFrame, period_col: str, gb_flag_col: str, res: ValidationResult) -> None:
+    if period_col not in df.columns or gb_flag_col not in df.columns:
+        # If columns are missing, other checks will flag that; treat as type/required errors
+        return
+
+    def is_2024_or_later(p: str) -> bool:
+        parsed = _parse_period(p)
+        return parsed is not None and (parsed[0] > 2023 or (parsed[0] == 2024 and parsed[1] >= 1))
+
+    mask_late = df[period_col].astype(str).map(is_2024_or_later)
+    subset = df.loc[mask_late, gb_flag_col]
+    # Require boolean True on or after 2024-Q1
+    bad = subset.map(lambda v: v is not True)
+    if bad.any():
+        res.add_error("gb_only must be True from 2024 onwards due to Great Britain-only coverage.")
+
+
+# ---- Public API: schema-driven validation ----
+
+def validate_dataframe(df: pd.DataFrame, schema: Dict) -> Dict[str, List[str]]:
     """
-    Composite check: required columns present and numeric columns coercible to numbers.
-    """
-    res = result or ValidationResult()
-    res = validate_required_columns(df, required_columns, res)
+    Validate a DataFrame against a simple schema and domain rules.
 
-    for col in numeric_columns:
-        if col not in df.columns:
-            res.issues.append(ValidationIssue(level="error", message=f"Column '{col}' not found"))
-            continue
-        # Attempt coercion to numeric; report rows that fail
-        coerced = pd.to_numeric(df[col], errors="coerce")
-        bad = coerced.isna() & df[col].notna()
-        if bad.any():
-            count = int(bad.sum())
-            res.issues.append(
-                ValidationIssue(
-                    level="error",
-                    message=f"Non-numeric values found in '{col}' (rows: {count})",
-                )
-            )
-    return res
-
-
-# ---- Convenience: end-to-end validation ----
-
-def validate_all(
-    df: pd.DataFrame,
-    expected_columns: Sequence[str],
-    strict_domains: bool = True,
-    raise_on_error: bool = True,
-) -> ValidationResult:
-    """
-    Runs a suite of validations suitable for the main tidy datasets.
-
-    Parameters:
-        df: Input DataFrame.
-        expected_columns: Columns expected to exist in df.
-        strict_domains: If True, domain violations are errors; otherwise warnings.
-        raise_on_error: If True, raises ValidationError on any error.
+    Expected schema shape:
+        {
+            "columns": {
+                "period": {"type": "string", "format": r"^\\d{4}-Q[1-4]$"},
+                "geography": {"type": "string"},
+                "purpose": {"type": "string"},
+                "transport": {"type": "string"},
+                "visits_thousands": {"type": "number", "min": 0},
+                "expenditure_millions": {"type": "number", "min": 0},
+                "nights_thousands": {"type": "number", "min": 0},
+                "gb_only": {"type": "boolean"},
+            },
+            "unique_keys": ["period", "geography", "purpose", "transport"],
+        }
 
     Returns:
-        ValidationResult containing all issues.
+        dict report with "errors" and "warnings" lists.
+    Raises:
+        ValidationError if any errors are found.
     """
     res = ValidationResult()
 
-    # Schema and types
-    res = validate_schema_and_types(
-        df=df,
-        required_columns=expected_columns,
-        numeric_columns=[c for c in NON_NEGATIVE_COLUMNS if c in expected_columns],
-        result=res,
-    )
-
-    # Quarters
-    res = validate_quarters(df, quarter_column="quarter", result=res)
-
-    # Domains (best-effort; only if present)
-    res = validate_domains(
-        df, "geography", VALID_GEOGRAPHY_GROUPS, strict=strict_domains, result=res
-    )
-    res = validate_domains(
-        df, "purpose", VALID_PURPOSES, strict=strict_domains, result=res
-    )
-    res = validate_domains(
-        df, "transport", VALID_TRANSPORT_MODES, strict=strict_domains, result=res
-    )
-
-    # Ranges and coverage
-    res = validate_non_negative(df, columns=NON_NEGATIVE_COLUMNS, result=res)
-    res = validate_coverage_break(
-        df, year_break=2024, geography_column="geography", quarter_column="quarter", result=res
-    )
-
-    if raise_on_error:
+    # Basic structure
+    if "columns" not in schema or not isinstance(schema["columns"], dict):
+        res.add_error("Schema invalid: 'columns' mapping is required.")
         res.raise_for_errors()
-    return res
+
+    schema_cols: Dict[str, Dict] = schema["columns"]
+    required_cols = list(schema_cols.keys())
+
+    _check_empty(df, res)
+    _check_required_columns(df, required_cols, res)
+
+    # Types and formats
+    _check_types(df, schema_cols, res)
+
+    # Uniqueness across keys
+    unique_keys = schema.get("unique_keys", [])
+    _check_unique_keys(df, unique_keys, res)
+
+    # Period continuity
+    _check_period_continuity(df, period_col="period", res=res)
+
+    # GB-only rule from 2024 onwards
+    _check_gb_only_from_2024(df, period_col="period", gb_flag_col="gb_only", res=res)
+
+    # Finalise
+    res.raise_for_errors()
+    return res.to_report()
