@@ -90,7 +90,8 @@ def _coerce_numerics(df: pd.DataFrame) -> pd.DataFrame:
         return pd.to_numeric(series, errors="coerce").astype("Float64")
 
     # Coerce metrics to numeric with expected names
-    for col in ["visits_thousands", "expenditure_millions", "nights_thousands"]:
+    metric_cols = ["visits_thousands", "expenditure_millions", "nights_thousands"]
+    for col in metric_cols:
         if col in df.columns:
             df[col] = to_numeric(df[col])
 
@@ -100,6 +101,11 @@ def _coerce_numerics(df: pd.DataFrame) -> pd.DataFrame:
         if mask.any():
             logging.info("Converting expenditure from GBP to millions.")
             df.loc[mask, "expenditure_millions"] = df.loc[mask, "expenditure_millions"] / 1_000_000
+
+    # Enforce non-negative values across numeric metrics
+    for col in metric_cols:
+        if col in df.columns:
+            df[col] = df[col].clip(lower=0)
 
     return df
 
