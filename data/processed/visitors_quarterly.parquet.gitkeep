@@ -1,0 +1,48 @@
+Generating visitors_quarterly.parquet
+Prerequisites
+Install dependencies:
+
+bash
+pip install -e .
+Raw data present: Ensure data/raw/overseas-visitors-to-britain-2024.xlsx exists.
+
+Option 1: Use the Makefile
+Run the full pipeline:
+
+bash
+make all
+Process data only (if available):
+
+bash
+make data
+This will orchestrate load → clean → transform → validate and write outputs under data/processed/, including visitors_quarterly.parquet.
+
+Option 2: Run the Python pipeline directly
+Execute the orchestration script:
+
+bash
+python src/pipeline.py
+The script should read from data/raw/, produce interim CSVs, validate them against schemas.py, and write data/processed/visitors_quarterly.parquet.
+
+What happens under the hood
+Load: src/data/load.py reads the ONS Excel workbook and selects the relevant sheets/columns.
+
+Clean: src/data/clean.py standardizes column names, types, and quarter periods.
+
+Transform: src/data/transform.py aggregates to a single quarterly table with core metrics.
+
+Validate: src/data/validate.py enforces schemas from src/data/schemas.py.
+
+Write: src/utils/io.py (or logic in pipeline.py) saves the Parquet file to data/processed/visitors_quarterly.parquet.
+
+Verify the output
+Check the file exists:
+
+bash
+ls data/processed/visitors_quarterly.parquet
+Inspect schema quickly (optional):
+
+python
+import pandas as pd
+df = pd.read_parquet("data/processed/visitors_quarterly.parquet")
+print(df.head())
