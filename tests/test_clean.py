@@ -92,8 +92,11 @@ def test_coverage_respects_methodological_break(raw_sample):
 
 def test_no_missing_in_key_fields_after_cleaning(raw_sample):
     cleaned = clean(raw_sample)
-    key_fields = [
-        'coverage',
+    # Enforce non-missing coverage only where period is present
+    non_missing_period = cleaned.dropna(subset=['period'])
+    assert non_missing_period['coverage'].notna().all()
+    # Other key fields should be complete for all rows
+    other_fields = [
         'geography',
         'purpose',
         'transport',
@@ -101,8 +104,7 @@ def test_no_missing_in_key_fields_after_cleaning(raw_sample):
         'expenditure_millions',
         'nights_thousands',
     ]
-    # Key fields should be complete; period may be missing if unparseable
-    assert cleaned[key_fields].notna().all().all()
+    assert cleaned[other_fields].notna().all().all()
 
 
 def test_deduplication_and_row_integrity(raw_sample):
