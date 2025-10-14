@@ -26,7 +26,6 @@ def _write_excel_with_sheets(path: Path, sheets: dict[str, pd.DataFrame]) -> Non
     """Write a multi-sheet Excel file in a memory-safe manner."""
     with pd.ExcelWriter(path, engine="xlsxwriter") as writer:
         for name, df in sheets.items():
-            # Include an extra header row to mimic real-world quirks
             header_row = pd.DataFrame(
                 [["Header row"] + [""] * (df.shape[1] - 1)],
                 columns=df.columns,
@@ -45,7 +44,6 @@ def sample_excel(tmp_path: Path) -> Path:
         "2021": _make_sample_frame("2021"),
         "2022": _make_sample_frame("2022"),
         "2023": _make_sample_frame("2023"),
-        # 2024 onwards is Great Britain only; same schema at load stage
         "2024": _make_sample_frame("2024"),
     }
     _write_excel_with_sheets(path, sheets)
@@ -53,8 +51,8 @@ def sample_excel(tmp_path: Path) -> Path:
 
 
 def test_load_concatenates_all_sheets_and_preserves_columns(sample_excel: Path):
-    """Loading with sheet_name=None should concatenate all sheets and retain expected columns."""
-    df = load_excel(sample_excel, {"sheet_name": None})
+    """Loading should concatenate all sheets and retain expected columns."""
+    df = load_excel(sample_excel)
     expected = [
         "Period",
         "Geography",
@@ -65,36 +63,20 @@ def test_load_concatenates_all_sheets_and_preserves_columns(sample_excel: Path):
         "Spend (£m)",
     ]
     assert list(df.columns) == expected
-    # We wrote 6 sheets with 3 rows each; total 18 records expected after header handling.
     assert len(df) == 6 * 3
-    # Basic type expectations (Excel numeric -> numeric dtypes)
     assert pd.api.types.is_numeric_dtype(df["Visits (000s)"])
     assert pd.api.types.is_numeric_dtype(df["Nights (000s)"])
     assert pd.api.types.is_numeric_dtype(df["Spend (£m)"])
-    # Period and categoricals are read as object at this stage
     assert df["Period"].dtype == object
     assert df["Geography"].dtype == object
     assert df["Purpose"].dtype == object
     assert df["Transport"].dtype == object
 
 
-def test_load_respects_explicit_sheet_selection(sample_excel: Path):
-    """Loading a specific sheet should return only that period’s data."""
-    df_2024 = load_excel(sample_excel, {"sheet_name": "2024"})
-    assert df_2024["Period"].str.startswith("2024").all()
-    assert len(df_2024) == 3
-
-    df_2021 = load_excel(sample_excel, {"sheet_name": "2021"})
-    assert df_2021["Period"].str.startswith("2021").all()
-    assert len(df_2021) == 3
-
-
 def test_load_handles_header_rows(sample_excel: Path):
     """Loader should skip non-data header rows and return clean records only."""
-    df = load_excel(sample_excel, {"sheet_name": "2019"})
-    # Ensure none of the artificial header markers remain
+    df = load_excel(sample_excel)
     assert not (df["Period"] == "Header row").any()
-    # All numeric columns should remain numeric after header removal
     for col in ["Visits (000s)", "Nights (000s)", "Spend (£m)"]:
         assert pd.api.types.is_numeric_dtype(df[col])
 
@@ -103,4 +85,4 @@ def test_load_raises_on_missing_file(tmp_path: Path):
     """Attempting to load a non-existent file should raise a clear exception."""
     missing = tmp_path / "does-not-exist.xlsx"
     with pytest.raises((FileNotFoundError, OSError)):
-        load_excel(missing, {"sheet_name": None})
+        load_excel(missing)
