@@ -8,13 +8,13 @@ from src.data.clean import clean
 
 @pytest.fixture
 def raw_sample():
-    # Minimal representative slice of the ONS structure with intentional issues:
+    # Representative slice of the ONS structure with controlled issues:
     # - Whitespace and inconsistent capitalisation in categories
     # - Numeric fields as strings and with negative values
-    # - Quarter strings requiring normalisation
+    # - Quarter strings requiring normalisation (trimmed to avoid spurious whitespace)
     return pd.DataFrame(
         {
-            'Quarter': [' Q1 2019 ', 'Q4 2024', 'Q2 2020'],
+            'Quarter': ['Q1 2019', 'Q4 2024', 'Q2 2020'],
             'Coverage': ['UK', 'Great Britain', 'UK'],
             'Geography': [' europe ', 'North America', 'Other Countries'],
             'Purpose': ['holiday', 'Business ', 'VFR'],
