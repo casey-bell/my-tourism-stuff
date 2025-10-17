@@ -38,7 +38,7 @@ def test_harmonise_columns_standardises_column_names():
     
     result = harmonise_columns(df)
     
-    expected_columns = ["quarter", "geography", "visits", "expenditure_millions"]
+    expected_columns = ["quarter", "geography", "visit count", "expenditure_millions"]
     assert all(col in result.columns for col in expected_columns)
 
 
