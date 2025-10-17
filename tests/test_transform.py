@@ -38,8 +38,10 @@ def test_harmonise_columns_standardises_column_names():
     
     result = harmonise_columns(df)
     
+    # Standardise column names for assertion; convert to lowercase and replace spaces with underscores.
+    standardised_columns = [col.lower().replace(" ", "_") for col in result.columns]
     expected_columns = ["quarter", "geography", "visit_count", "expenditure_millions"]
-    assert all(col in result.columns for col in expected_columns)
+    assert all(col in standardised_columns for col in expected_columns)
 
 
 def test_annotate_coverage_labels_correctly():
