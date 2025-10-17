@@ -56,12 +56,13 @@ ALTERNATE_COL_MAP = {
 
 
 def _normalise_header(name: str) -> str:
-    """Lowercase, strip, replace spaces/dashes/underscores for matching."""
+    """Lowercase, strip, replace dashes/underscores and spaces for matching."""
     return (
         name.strip()
         .lower()
         .replace("-", " ")
         .replace("_", " ")
+        .replace(" ", "_")
     )
 
 
