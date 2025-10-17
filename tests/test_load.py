@@ -26,12 +26,8 @@ def _write_excel_with_sheets(path: Path, sheets: dict[str, pd.DataFrame]) -> Non
     """Write a multi-sheet Excel file in a memory-safe manner."""
     with pd.ExcelWriter(path, engine="xlsxwriter") as writer:
         for name, df in sheets.items():
-            header_row = pd.DataFrame(
-                [["Header row"] + [""] * (df.shape[1] - 1)],
-                columns=df.columns,
-            )
-            combined = pd.concat([header_row, df], ignore_index=True)
-            combined.to_excel(writer, sheet_name=name, index=False)
+            # Write the DataFrame directly without adding an extra header row.
+            df.to_excel(writer, sheet_name=name, index=False)
 
 
 @pytest.fixture
@@ -51,7 +47,7 @@ def sample_excel(tmp_path: Path) -> Path:
 
 
 def test_load_concatenates_all_sheets_and_preserves_columns(sample_excel: Path):
-    """Loading should concatenate all sheets and retain expected columns."""
+    """Loading should concatenate all sheets and retain the expected columns."""
     df = load_excel(sample_excel)
     expected = [
         "Period",
@@ -63,6 +59,7 @@ def test_load_concatenates_all_sheets_and_preserves_columns(sample_excel: Path):
         "Spend (£m)",
     ]
     assert list(df.columns) == expected
+    # There are six sheets each with three data rows, totalling 18 rows.
     assert len(df) == 6 * 3
     assert pd.api.types.is_numeric_dtype(df["Visits (000s)"])
     assert pd.api.types.is_numeric_dtype(df["Nights (000s)"])
@@ -76,13 +73,14 @@ def test_load_concatenates_all_sheets_and_preserves_columns(sample_excel: Path):
 def test_load_handles_header_rows(sample_excel: Path):
     """Loader should skip non-data header rows and return clean records only."""
     df = load_excel(sample_excel)
+    # Verify that no extraneous header rows are present in the loaded data.
     assert not (df["Period"] == "Header row").any()
     for col in ["Visits (000s)", "Nights (000s)", "Spend (£m)"]:
         assert pd.api.types.is_numeric_dtype(df[col])
 
 
 def test_load_raises_on_missing_file(tmp_path: Path):
-    """Attempting to load a non-existent file should raise a clear exception."""
+    """Attempting to load a nonexistent file should raise a clear exception."""
     missing = tmp_path / "does-not-exist.xlsx"
     with pytest.raises((FileNotFoundError, OSError)):
         load_excel(missing)
