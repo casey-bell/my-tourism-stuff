@@ -34,19 +34,22 @@ def test_harmonise_columns_standardises_column_names():
         "Expenditure_Millions": [50.0, 75.0]
     })
     result = harmonise_columns(df)
-    # Compare the exact sets of columns after standardisation.
+    # Compare the exact set of columns after standardisation.
     standardised_columns = [col.lower().replace(" ", "_") for col in result.columns]
     expected_columns = {"quarter", "geography", "visits", "expenditure_millions"}
     assert set(standardised_columns) == expected_columns
 
 
 def test_annotate_coverage_labels_correctly():
+    # Use unambiguous quarter values to clearly map coverage labels.
     df = pd.DataFrame({
-        "quarter": ["2019Q1", "2023Q4", "2019Q1", "2019Q2"]
+        "quarter": ["2018Q1", "2023Q4", "2019Q2", "2020Q1"]
     })
     result = annotate_coverage(df)
-    expected_coverage = ["United Kingdom", "United Kingdom", "Great Britain", "Great Britain"]
-    expected_break = [False, False, True, True]
+    # Assumption: Quarters prior to 2020 are labelled 'Great Britain' with a method break,
+    # while quarters from 2020 onwards are labelled 'United Kingdom' without a method break.
+    expected_coverage = ["Great Britain", "United Kingdom", "Great Britain", "United Kingdom"]
+    expected_break = [True, False, True, False]
     assert list(result["coverage"]) == expected_coverage
     assert list(result["method_break"]) == expected_break
 
