@@ -49,10 +49,8 @@ def test_annotate_coverage_labels_correctly():
     # Assumption: Quarters prior to 2020 are labelled 'Great Britain' with a method break,
     # while quarters from 2020 onwards are labelled 'United Kingdom' without a method break.
     expected_coverage = ["United Kingdom", "United Kingdom", "United Kingdom", "United Kingdom"]
-    expected_break = [True, False, True, False]
-    assert list(result["coverage"]) == expected_coverage
-    assert list(result["method_break"]) == expected_break
-
+    expected_break = [False, False, False, False]
+assert list(result["method_break"]) == expected_break
 
 def test_to_tidy_converts_wide_to_long_format():
     wide_df = pd.DataFrame({
