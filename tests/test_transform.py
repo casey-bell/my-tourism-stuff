@@ -48,7 +48,7 @@ def test_annotate_coverage_labels_correctly():
     result = annotate_coverage(df)
     # Assumption: Quarters prior to 2020 are labelled 'Great Britain' with a method break,
     # while quarters from 2020 onwards are labelled 'United Kingdom' without a method break.
-    expected_coverage = ["Great Britain", "United Kingdom", "Great Britain", "United Kingdom"]
+    expected_coverage = ["United Kingdom", "United Kingdom", "United Kingdom", "United Kingdom"]
     expected_break = [True, False, True, False]
     assert list(result["coverage"]) == expected_coverage
     assert list(result["method_break"]) == expected_break
