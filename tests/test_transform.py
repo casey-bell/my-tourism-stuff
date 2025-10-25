@@ -39,7 +39,6 @@ def test_harmonise_columns_standardises_column_names():
     expected_columns = {"quarter", "geography", "visits", "expenditure_millions"}
     assert set(standardised_columns) == expected_columns
 
-
 def test_annotate_coverage_labels_correctly():
     # Use unambiguous quarter values to clearly map coverage labels.
     df = pd.DataFrame({
@@ -50,7 +49,7 @@ def test_annotate_coverage_labels_correctly():
     # while quarters from 2020 onwards are labelled 'United Kingdom' without a method break.
     expected_coverage = ["United Kingdom", "United Kingdom", "United Kingdom", "United Kingdom"]
     expected_break = [False, False, False, False]
-assert list(result["method_break"]) == expected_break
+    assert list(result["method_break"]) == expected_break
 
 def test_to_tidy_converts_wide_to_long_format():
     wide_df = pd.DataFrame({
