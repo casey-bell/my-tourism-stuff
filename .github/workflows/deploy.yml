@@ -36,14 +36,21 @@ jobs:
           mkdir -p site
           # Convert valid notebook files to HTML (skip non-JSON files)
           for notebook in notebooks/*.ipynb; do
-            if [ -f "$notebook" ] && file "$notebook" | grep -q "JSON"; then
+            # Check if glob matched any files
+            [ -e "$notebook" ] || continue
+            if file "$notebook" | grep -q "JSON"; then
               jupyter nbconvert --to html --output-dir=site "$notebook" || echo "Warning: Failed to convert $notebook"
             else
               echo "Skipping non-JSON file: $notebook"
             fi
           done
-          # Copy README as index
-          cp README.md site/
+          # Convert README to HTML for web viewing
+          if command -v pandoc >/dev/null 2>&1; then
+            pandoc README.md -o site/index.html
+          else
+            # Fallback: just copy README as markdown if pandoc not available
+            cp README.md site/index.md
+          fi
           echo 'Build completed successfully'
 
       - name: Check build output
