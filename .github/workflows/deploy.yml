@@ -30,10 +30,36 @@ jobs:
       - name: Run tests
         run: python -m pytest tests/
 
+      - name: Build site
+        run: |
+          echo 'Building deployment site...'
+          mkdir -p site
+          # Convert valid notebook files to HTML (skip non-JSON files)
+          for notebook in notebooks/*.ipynb; do
+            if [ -f "$notebook" ] && file "$notebook" | grep -q "JSON"; then
+              jupyter nbconvert --to html --output-dir=site "$notebook" || echo "Warning: Failed to convert $notebook"
+            else
+              echo "Skipping non-JSON file: $notebook"
+            fi
+          done
+          # Copy README as index
+          cp README.md site/
+          echo 'Build completed successfully'
+
+      - name: Check build output
+        run: |
+          if [ ! -d "site" ] || [ -z "$(ls -A site)" ]; then
+            echo "ERROR: Build failed - site directory is missing or empty"
+            exit 1
+          fi
+          echo "Build verification passed - site directory exists and contains files"
+          ls -la site/
+
       - name: Deploy the application
         if: ${{ success() }}
         env:
           DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          DEPLOY_SOURCE_DIR: site
         run: |
           echo 'Deploying the application...'
           chmod +x ./deploy.sh

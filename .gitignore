@@ -41,6 +41,7 @@ models/
 exports/
 reports/
 artifacts/
+site/
 
 # IDE
 .vscode/
