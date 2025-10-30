@@ -30,10 +30,66 @@ jobs:
       - name: Run tests
         run: python -m pytest tests/
 
+      - name: Build site
+        run: |
+          echo 'Building deployment site...'
+          mkdir -p site
+          # Convert valid notebook files to HTML (skip non-JSON files)
+          for notebook in notebooks/*.ipynb; do
+            # Check if glob matched any files
+            [ -e "$notebook" ] || continue
+            if file "$notebook" | grep -q "JSON"; then
+              jupyter nbconvert --to html --output-dir=site "$notebook" || echo "Warning: Failed to convert $notebook"
+            else
+              echo "Skipping non-JSON file: $notebook"
+            fi
+          done
+          # Convert README to HTML for web viewing
+          python -c "
+          from markdown_it import MarkdownIt
+          with open('README.md', 'r') as f:
+              md_content = f.read()
+          md = MarkdownIt()
+          html_body = md.render(md_content)
+          html_content = f'''<!DOCTYPE html>
+          <html>
+          <head>
+              <meta charset=\"utf-8\">
+              <title>My Tourism Stuff</title>
+              <style>
+                  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; 
+                         max-width: 980px; margin: 40px auto; padding: 0 20px; line-height: 1.6; }}
+                  code {{ background: #f6f8fa; padding: 2px 6px; border-radius: 3px; }}
+                  pre {{ background: #f6f8fa; padding: 16px; border-radius: 6px; overflow: auto; }}
+                  h1, h2, h3 {{ border-bottom: 1px solid #eaecef; padding-bottom: 8px; }}
+                  table {{ border-collapse: collapse; width: 100%; }}
+                  th, td {{ border: 1px solid #dfe2e5; padding: 8px 12px; }}
+                  th {{ background: #f6f8fa; }}
+              </style>
+          </head>
+          <body>
+          {html_body}
+          </body>
+          </html>'''
+          with open('site/index.html', 'w') as f:
+              f.write(html_content)
+          "
+          echo 'Build completed successfully'
+
+      - name: Check build output
+        run: |
+          if [ ! -d "site" ] || [ -z "$(ls -A site)" ]; then
+            echo "ERROR: Build failed - site directory is missing or empty"
+            exit 1
+          fi
+          echo "Build verification passed - site directory exists and contains files"
+          ls -la site/
+
       - name: Deploy the application
         if: ${{ success() }}
         env:
           DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+          DEPLOY_SOURCE_DIR: site
         run: |
           echo 'Deploying the application...'
           chmod +x ./deploy.sh
