@@ -24,6 +24,10 @@ dependencies = [
     # Ensure test runner and coverage plugin are available in CI environments
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
+    # Needed by nbconvert/Jupyter to render Markdown in notebooks
+    "markdown-it-py>=3.0.0",
+    # Explicit nbconvert dependency reduces surprises during deploy
+    "nbconvert>=7.4.0",
 ]
 
 [project.optional-dependencies]
