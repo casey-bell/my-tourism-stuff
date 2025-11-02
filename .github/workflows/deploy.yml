@@ -118,12 +118,13 @@ jobs:
           echo "Build verification passed - site directory exists and contains files"
           ls -la site/
 
-      # Upload the generated site as a Pages artefact and then deploy using the official Pages deploy action.
-      # This avoids constructing a push URL manually and prevents errors like "Malformed input to a URL function".
-      - name: Upload site artefact for Pages
-        uses: actions/upload-pages-artifact@v1
+      # Publish the generated site by pushing to the gh-pages branch.
+      # Using a publisher that pushes the built artefact directly avoids any
+      # dependency on deprecated upload-artifact versions.
+      - name: Publish site to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: site
-
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v1
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gh-pages
+          keep_files: false
