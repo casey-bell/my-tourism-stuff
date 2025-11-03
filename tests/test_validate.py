@@ -151,9 +151,19 @@ def test_gb_only_flag_required_from_2024_onwards():
 def test_types_are_enforced():
     """
     Enforce declared types: numeric metrics must be numbers, gb_only must be boolean.
+
+    To avoid triggering pandas' setting-with-incompatible-dtype warning or future error,
+    promote the target columns to object dtype first, then insert deliberately invalid values.
+    This keeps the test intent (the validator should reject incorrect types) while avoiding
+    assignment-time dtype incompatibility from pandas.
     """
     schema = make_sample_schema()
     df = make_valid_frame().copy()
+
+    # Promote these columns to object so that assigning strings does not raise at assignment time.
+    df["visits_thousands"] = df["visits_thousands"].astype(object)
+    df["gb_only"] = df["gb_only"].astype(object)
+
     df.loc[0, "visits_thousands"] = "two hundred and fifty"
     df.loc[1, "gb_only"] = "True"  # string instead of boolean
 
@@ -161,12 +171,15 @@ def test_types_are_enforced():
         validate_dataframe(df, schema)
 
     msg = str(exc.value).lower()
+    # The validator should indicate a type problem and mention the relevant fields.
     assert "type" in msg
     assert "visits_thousands" in msg or "gb_only" in msg
 
 
 def test_empty_frame_is_rejected_with_clear_message():
     schema = make_sample_schema()
+    # Build an empty DataFrame with the correct columns. Using pd.NA as the dtype initializer
+    # would produce different dtypes; empty lists are sufficient for presence-of-columns checks.
     df = pd.DataFrame({col: [] for col in schema["columns"].keys()})
 
     with pytest.raises(ValidationError) as exc:
