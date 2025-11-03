@@ -6,7 +6,7 @@ on:
       - main
 
 permissions:
-  contents: read        # allow reading repository contents
+  contents: write       # required to push the built site (git push)
   pages: write          # required to deploy to GitHub Pages
   id-token: write       # required by some deployment actions
 
@@ -17,6 +17,9 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -27,11 +30,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          # Install package dependencies and tools used during the build
           pip install -e .
+          pip install jupyter nbconvert markdown-it-py xlsxwriter
 
       - name: Install test dependencies
         run: |
-          pip install pytest xlsxwriter markdown-it-py
+          pip install pytest
 
       - name: Run tests
         run: python -m pytest tests/
@@ -58,7 +63,7 @@ jobs:
           # Convert README to HTML for web viewing (use markdown-it-py)
           python - <<'PY'
           import os
-          
+
           # Import MarkdownIt with a fallback for different package layouts
           try:
               from markdown_it import MarkdownIt
@@ -66,22 +71,21 @@ jobs:
               try:
                   from markdown_it.main import MarkdownIt
               except Exception as e:
-                  # Avoid importing sys; report the error and exit explicitly.
                   print("ERROR: Could not import MarkdownIt:", e)
                   raise SystemExit(1)
-          
+
           md = MarkdownIt()
-          
+
           readme_path = os.path.join(os.getcwd(), "README.md")
           if not os.path.isfile(readme_path):
               print("NOTICE: README.md not found, skipping index.html generation")
               raise SystemExit(0)
-          
+
           with open(readme_path, "r", encoding="utf-8") as f:
               md_content = f.read()
-          
+
           html_body = md.render(md_content)
-          
+
           html_content = """<!DOCTYPE html>
           <html>
           <head>
@@ -102,7 +106,7 @@ jobs:
           {}
           </body>
           </html>""".format(html_body)
-          
+
           with open(os.path.join("site", "index.html"), "w", encoding="utf-8") as f:
               f.write(html_content)
           PY
@@ -118,9 +122,6 @@ jobs:
           echo "Build verification passed - site directory exists and contains files"
           ls -la site/
 
-      # Publish the generated site by pushing to the gh-pages branch.
-      # Using a publisher that pushes the built artefact directly avoids any
-      # dependency on deprecated upload-artifact versions.
       - name: Publish site to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
@@ -128,3 +129,6 @@ jobs:
           publish_dir: ./site
           publish_branch: gh-pages
           keep_files: false
+          force_orphan: true
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
