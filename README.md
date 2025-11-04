@@ -439,10 +439,10 @@ Contributions are welcome! This project follows standard data science best pract
 - Adding new data sources or datasets
 - Improving data validation logic
 - Adding new analytical notebooks
-- Enhancing visualizations
+- Enhancing visualisations
 - Improving documentation
 - Adding more comprehensive tests
-- Performance optimizations
+- Performance optimisations
 
 ## Acknowledgments
 
