@@ -1,7 +1,8 @@
 import pandas as pd
 import pytest
 
-# Assumed validation API. Adapt imports if your module exposes different names.
+# Assumed validation API. Adapt imports if your module exposes
+# different names.
 from src.data.validate import (
     validate_dataframe,
     ValidationError,
@@ -10,7 +11,9 @@ from src.data.validate import (
 
 def make_sample_schema():
     """
-    Minimal schema describing expected columns and types, along with basic constraints.
+    Minimal schema describing expected columns and types, along with
+    basic constraints.
+
     - 'period': string in YYYY-Qn format
     - 'geography': categorical/str
     - 'purpose': categorical/str
@@ -18,7 +21,7 @@ def make_sample_schema():
     - 'visits_thousands': non-negative numeric
     - 'expenditure_millions': non-negative numeric
     - 'nights_thousands': non-negative numeric
-    - 'gb_only': boolean flag to distinguish the 2024 methodological break
+    - 'gb_only': boolean flag for the 2024 methodological break
     """
     return {
         "columns": {
@@ -36,7 +39,7 @@ def make_sample_schema():
 
 
 def make_valid_frame():
-    """Create a small, valid dataset spanning the UK→GB methodological change."""
+    """Create a small, valid dataset spanning the UK→GB change."""
     return pd.DataFrame(
         {
             "period": ["2023-Q4", "2024-Q1"],
@@ -46,7 +49,7 @@ def make_valid_frame():
             "visits_thousands": [250.0, 275.0],
             "expenditure_millions": [320.0, 350.0],
             "nights_thousands": [900.0, 950.0],
-            # 2023 data: UK coverage (gb_only False), 2024 data: GB coverage only (gb_only True)
+            # 2023: UK coverage (gb_only False); 2024: GB coverage only.
             "gb_only": [False, True],
         }
     )
@@ -55,7 +58,8 @@ def make_valid_frame():
 def test_valid_dataset_passes_validation():
     schema = make_sample_schema()
     df = make_valid_frame()
-    # Should not raise; returns a report dict with zero errors/warnings if implemented
+    # Should not raise; returns a report dict with zero
+    # errors/warnings if implemented.
     report = validate_dataframe(df, schema)
     assert isinstance(report, dict)
     assert report.get("errors", []) == []
@@ -77,7 +81,7 @@ def test_negative_values_are_rejected():
 def test_unique_key_violations_are_rejected():
     schema = make_sample_schema()
     df = make_valid_frame().copy()
-    # Duplicate the first row to violate uniqueness across the key set
+    # Duplicate the first row to violate uniqueness across the keys.
     df = pd.concat([df, df.iloc[[0]]], ignore_index=True)
 
     with pytest.raises(ValidationError) as exc:
@@ -90,7 +94,14 @@ def test_unique_key_violations_are_rejected():
 
 @pytest.mark.parametrize(
     "bad_period",
-    ["2024Q1", "24-Q1", "2024-Q5", "2024-Q0", "2024-Quarter1", "Q1-2024"],
+    [
+        "2024Q1",
+        "24-Q1",
+        "2024-Q5",
+        "2024-Q0",
+        "2024-Quarter1",
+        "Q1-2024",
+    ],
 )
 def test_period_format_is_enforced(bad_period):
     schema = make_sample_schema()
@@ -108,7 +119,9 @@ def test_period_format_is_enforced(bad_period):
 def test_period_continuity_is_checked():
     """
     Expect continuity over quarters within the observed range.
-    Here we skip 2023-Q3; validation should complain if continuity is required.
+
+    Here we skip 2023-Q3; validation should complain if continuity
+    is required.
     """
     schema = make_sample_schema()
     df = pd.DataFrame(
@@ -133,11 +146,12 @@ def test_period_continuity_is_checked():
 
 def test_gb_only_flag_required_from_2024_onwards():
     """
-    From 2024 onwards, data covers Great Britain only; expect gb_only=True on or after 2024-Q1.
+    From 2024 onwards, data covers Great Britain only; expect
+    gb_only=True on or after 2024-Q1.
     """
     schema = make_sample_schema()
     df = make_valid_frame().copy()
-    # Break the rule: set 2024-Q1 record to gb_only False
+    # Break the rule: set 2024-Q1 record to gb_only False.
     df.loc[df["period"] == "2024-Q1", "gb_only"] = False
 
     with pytest.raises(ValidationError) as exc:
@@ -150,17 +164,20 @@ def test_gb_only_flag_required_from_2024_onwards():
 
 def test_types_are_enforced():
     """
-    Enforce declared types: numeric metrics must be numbers, gb_only must be boolean.
+    Enforce declared types: numeric metrics must be numbers,
+    gb_only must be boolean.
 
-    To avoid triggering pandas' setting-with-incompatible-dtype warning or future error,
-    promote the target columns to object dtype first, then insert deliberately invalid values.
-    This keeps the test intent (the validator should reject incorrect types) while avoiding
-    assignment-time dtype incompatibility from pandas.
+    To avoid pandas' setting-with-incompatible-dtype warning or future
+    error, promote the target columns to object dtype first, then insert
+    deliberately invalid values. This keeps the test intent (the
+    validator should reject incorrect types) while avoiding assignment
+    time dtype incompatibility from pandas.
     """
     schema = make_sample_schema()
     df = make_valid_frame().copy()
 
-    # Promote these columns to object so that assigning strings does not raise at assignment time.
+    # Promote these columns to object so assigning strings does not
+    # raise at assignment time.
     df["visits_thousands"] = df["visits_thousands"].astype(object)
     df["gb_only"] = df["gb_only"].astype(object)
 
@@ -171,15 +188,17 @@ def test_types_are_enforced():
         validate_dataframe(df, schema)
 
     msg = str(exc.value).lower()
-    # The validator should indicate a type problem and mention the relevant fields.
+    # The validator should indicate a type problem and mention the
+    # relevant fields.
     assert "type" in msg
     assert "visits_thousands" in msg or "gb_only" in msg
 
 
 def test_empty_frame_is_rejected_with_clear_message():
     schema = make_sample_schema()
-    # Build an empty DataFrame with the correct columns. Using pd.NA as the dtype initializer
-    # would produce different dtypes; empty lists are sufficient for presence-of-columns checks.
+    # Build an empty DataFrame with the correct columns.
+    # Using pd.NA as the dtype initializer would produce different dtypes;
+    # empty lists are sufficient for presence-of-columns checks.
     df = pd.DataFrame({col: [] for col in schema["columns"].keys()})
 
     with pytest.raises(ValidationError) as exc:
