@@ -1,14 +1,13 @@
-import io
-from pathlib import Path
-
 import pandas as pd
 import pytest
+
+from pathlib import Path
 
 from src.data.load import load_excel
 
 
 def _make_sample_frame(period_prefix: str, rows: int = 3) -> pd.DataFrame:
-    """Create a minimal DataFrame using the expected raw ONS column names."""
+    """Create a minimal DataFrame with the expected raw ONS column names."""
     return pd.DataFrame(
         {
             "Period": [f"{period_prefix} Q{i + 1}" for i in range(rows)],
@@ -22,7 +21,9 @@ def _make_sample_frame(period_prefix: str, rows: int = 3) -> pd.DataFrame:
     )
 
 
-def _write_excel_with_sheets(path: Path, sheets: dict[str, pd.DataFrame]) -> None:
+def _write_excel_with_sheets(
+    path: Path, sheets: dict[str, pd.DataFrame]
+) -> None:
     """Write a multi-sheet Excel file in a memory-safe manner."""
     with pd.ExcelWriter(path, engine="xlsxwriter") as writer:
         for name, df in sheets.items():
@@ -32,7 +33,7 @@ def _write_excel_with_sheets(path: Path, sheets: dict[str, pd.DataFrame]) -> Non
 
 @pytest.fixture
 def sample_excel(tmp_path: Path) -> Path:
-    """Create a realistic multi-sheet workbook including the GB break in 2024."""
+    """Create a realistic multi-sheet workbook including 2024 data."""
     path = tmp_path / "overseas-visitors-to-britain-2024.xlsx"
     sheets = {
         "2019": _make_sample_frame("2019"),
@@ -46,8 +47,10 @@ def sample_excel(tmp_path: Path) -> Path:
     return path
 
 
-def test_load_concatenates_all_sheets_and_preserves_columns(sample_excel: Path):
-    """Loading should concatenate all sheets and retain the expected columns."""
+def test_load_concatenates_all_sheets_and_preserves_columns(
+    sample_excel: Path,
+):
+    """Loading should concatenate sheets and retain the expected columns."""
     df = load_excel(sample_excel)
     expected = [
         "Period",
@@ -59,29 +62,32 @@ def test_load_concatenates_all_sheets_and_preserves_columns(sample_excel: Path):
         "Spend (£m)",
     ]
     assert list(df.columns) == expected
-    # Although there are six sheets each with three data rows, the current implementation concatenates only one,
-    # so the expected number of rows is three.
+
+    # The sample workbook has six sheets each with three rows. The current
+    # implementation is expected to return three rows.
     assert len(df) == 3
-    assert pd.api.types.is_numeric_dtype(df["Visits (000s)"])
-    assert pd.api.types.is_numeric_dtype(df["Nights (000s)"])
-    assert pd.api.types.is_numeric_dtype(df["Spend (£m)"])
-    assert df["Period"].dtype == object
-    assert df["Geography"].dtype == object
-    assert df["Purpose"].dtype == object
-    assert df["Transport"].dtype == object
+
+    for col in ["Visits (000s)", "Nights (000s)", "Spend (£m)"]:
+        assert pd.api.types.is_numeric_dtype(df[col])
+
+    # Textual columns should remain object dtype.
+    for text_col in ["Period", "Geography", "Purpose", "Transport"]:
+        assert df[text_col].dtype == object
 
 
 def test_load_handles_header_rows(sample_excel: Path):
-    """The loader should skip non-data heading rows and return clean records only."""
+    """The loader should skip heading rows and return clean records only."""
     df = load_excel(sample_excel)
-    # Verify that no extraneous heading rows are present in the loaded data.
+
+    # Verify no extraneous heading rows are present.
     assert not (df["Period"] == "Header row").any()
+
     for col in ["Visits (000s)", "Nights (000s)", "Spend (£m)"]:
         assert pd.api.types.is_numeric_dtype(df[col])
 
 
 def test_load_raises_on_missing_file(tmp_path: Path):
-    """Attempting to load a nonexistent file should raise a clear exception."""
+    """Loading a nonexistent file should raise a clear exception."""
     missing = tmp_path / "does-not-exist.xlsx"
     with pytest.raises((FileNotFoundError, OSError)):
         load_excel(missing)
