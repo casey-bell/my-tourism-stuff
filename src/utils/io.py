@@ -12,41 +12,24 @@ PathLike = Union[str, Path]
 
 def find_project_root(start: Optional[Path] = None) -> Path:
     """
-    Locate the project root by searching upwards for 'pyproject.toml' or a '.git' directory.
+    Search upward for project root.
 
-    Parameters
-    ----------
-    start : Optional[Path]
-        Starting directory. Defaults to the current file's directory.
-
-    Returns
-    -------
-    Path
-        The detected project root directory.
+    Looks for 'pyproject.toml' or a '.git' directory. If none is
+    found the starting directory is returned.
     """
     current = (start or Path(__file__).resolve()).parent
     for parent in [current, *current.parents]:
         if (parent / "pyproject.toml").exists() or (parent / ".git").is_dir():
             return parent
-    # Fallback to the starting directory if no markers are found
     return current
 
 
 def as_path(path: PathLike, base: Optional[Path] = None) -> Path:
     """
-    Convert input to a Path. If the path is relative, resolve it against the project root or a provided base.
+    Convert a path-like to a resolved Path.
 
-    Parameters
-    ----------
-    path : PathLike
-        The path-like object to resolve.
-    base : Optional[Path]
-        Base directory to resolve relative paths against. Defaults to project root.
-
-    Returns
-    -------
-    Path
-        Resolved absolute path.
+    Relative paths are resolved against the provided base or the
+    detected project root.
     """
     p = Path(path)
     if p.is_absolute():
@@ -57,17 +40,9 @@ def as_path(path: PathLike, base: Optional[Path] = None) -> Path:
 
 def ensure_parent_dir(path: PathLike) -> Path:
     """
-    Ensure the parent directory of the given path exists.
+    Ensure the parent directory for `path` exists.
 
-    Parameters
-    ----------
-    path : PathLike
-        Target file path.
-
-    Returns
-    -------
-    Path
-        The resolved path.
+    Returns the resolved Path for the target.
     """
     p = as_path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -76,17 +51,12 @@ def ensure_parent_dir(path: PathLike) -> Path:
 
 def _check_overwrite(path: Path, overwrite: bool) -> None:
     """
-    Raise if the file exists and overwrite is False.
-
-    Parameters
-    ----------
-    path : Path
-        Target file path.
-    overwrite : bool
-        Whether to allow overwriting existing files.
+    Raise FileExistsError if path exists and overwrite is False.
     """
     if path.exists() and not overwrite:
-        raise FileExistsError(f"File already exists and overwrite is disabled: {path}")
+        raise FileExistsError(
+            f"File exists and overwrite is disabled: {path}"
+        )
 
 
 def read_parquet(
@@ -94,23 +64,7 @@ def read_parquet(
     columns: Optional[Iterable[str]] = None,
     engine: str = "pyarrow",
 ) -> pd.DataFrame:
-    """
-    Read a Parquet file into a DataFrame.
-
-    Parameters
-    ----------
-    path : PathLike
-        Path to the Parquet file.
-    columns : Optional[Iterable[str]]
-        Subset of columns to read.
-    engine : str
-        Parquet engine ('pyarrow' or 'fastparquet').
-
-    Returns
-    -------
-    pd.DataFrame
-        Loaded DataFrame.
-    """
+    """Read a Parquet file into a DataFrame."""
     p = as_path(path)
     return pd.read_parquet(p, columns=columns, engine=engine)
 
@@ -123,29 +77,7 @@ def write_parquet(
     overwrite: bool = True,
     engine: str = "pyarrow",
 ) -> Path:
-    """
-    Write a DataFrame to Parquet.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Data to write.
-    path : PathLike
-        Output path.
-    compression : Optional[str]
-        Compression codec (e.g., 'snappy', 'gzip', None).
-    index : bool
-        Whether to write the index.
-    overwrite : bool
-        Allow overwriting existing files.
-    engine : str
-        Parquet engine ('pyarrow' or 'fastparquet').
-
-    Returns
-    -------
-    Path
-        Path to the written file.
-    """
+    """Write a DataFrame to Parquet and return the written path."""
     p = ensure_parent_dir(path)
     _check_overwrite(p, overwrite)
     df.to_parquet(p, compression=compression, index=index, engine=engine)
@@ -157,23 +89,7 @@ def read_csv(
     dtype: Optional[dict] = None,
     parse_dates: Optional[Union[list, dict]] = None,
 ) -> pd.DataFrame:
-    """
-    Read a CSV file into a DataFrame.
-
-    Parameters
-    ----------
-    path : PathLike
-        Path to the CSV file.
-    dtype : Optional[dict]
-        Dtype mapping for columns.
-    parse_dates : Optional[Union[list, dict]]
-        Columns to parse as dates.
-
-    Returns
-    -------
-    pd.DataFrame
-        Loaded DataFrame.
-    """
+    """Read a CSV file into a DataFrame."""
     p = as_path(path)
     return pd.read_csv(p, dtype=dtype, parse_dates=parse_dates)
 
@@ -185,27 +101,7 @@ def write_csv(
     overwrite: bool = True,
     **kwargs: Any,
 ) -> Path:
-    """
-    Write a DataFrame to CSV.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Data to write.
-    path : PathLike
-        Output path.
-    index : bool
-        Whether to write the index.
-    overwrite : bool
-        Allow overwriting existing files.
-    kwargs : Any
-        Additional arguments forwarded to pandas.DataFrame.to_csv.
-
-    Returns
-    -------
-    Path
-        Path to the written file.
-    """
+    """Write a DataFrame to CSV and return the written path."""
     p = ensure_parent_dir(path)
     _check_overwrite(p, overwrite)
     df.to_csv(p, index=index, **kwargs)
@@ -219,47 +115,15 @@ def read_excel(
     header: Union[int, list[int]] = 0,
     engine: Optional[str] = None,
 ) -> pd.DataFrame:
-    """
-    Read an Excel worksheet into a DataFrame.
-
-    Parameters
-    ----------
-    path : PathLike
-        Path to the Excel file.
-    sheet_name : Optional[Union[str, int]]
-        Sheet name or index. Defaults to the first sheet.
-    dtype : Optional[dict]
-        Dtype mapping for columns.
-    header : Union[int, list[int]]
-        Row(s) to use as the column names.
-    engine : Optional[str]
-        Excel engine (e.g., 'openpyxl').
-
-    Returns
-    -------
-    pd.DataFrame
-        Loaded DataFrame.
-    """
+    """Read an Excel sheet into a DataFrame."""
     p = as_path(path)
-    return pd.read_excel(p, sheet_name=sheet_name, dtype=dtype, header=header, engine=engine)
+    return pd.read_excel(
+        p, sheet_name=sheet_name, dtype=dtype, header=header, engine=engine
+    )
 
 
 def read_json(path: PathLike, encoding: str = "utf-8") -> Any:
-    """
-    Read a JSON file.
-
-    Parameters
-    ----------
-    path : PathLike
-        Path to the JSON file.
-    encoding : str
-        File encoding.
-
-    Returns
-    -------
-    Any
-        Parsed JSON content.
-    """
+    """Read and parse a JSON file."""
     p = as_path(path)
     with p.open("r", encoding=encoding) as f:
         return json.load(f)
@@ -272,27 +136,7 @@ def write_json(
     overwrite: bool = True,
     indent: int = 2,
 ) -> Path:
-    """
-    Write an object to JSON.
-
-    Parameters
-    ----------
-    obj : Any
-        Object to serialise.
-    path : PathLike
-        Output path.
-    encoding : str
-        File encoding.
-    overwrite : bool
-        Allow overwriting existing files.
-    indent : int
-        Indentation level for formatting.
-
-    Returns
-    -------
-    Path
-        Path to the written file.
-    """
+    """Write an object to JSON and return the written path."""
     p = ensure_parent_dir(path)
     _check_overwrite(p, overwrite)
     with p.open("w", encoding=encoding) as f:
@@ -301,36 +145,12 @@ def write_json(
 
 
 def exists(path: PathLike) -> bool:
-    """
-    Check whether a path exists.
-
-    Parameters
-    ----------
-    path : PathLike
-        Path to check.
-
-    Returns
-    -------
-    bool
-        True if the path exists, otherwise False.
-    """
+    """Return True if path exists."""
     return as_path(path).exists()
 
 
 def ensure_dir(path: PathLike) -> Path:
-    """
-    Ensure a directory exists.
-
-    Parameters
-    ----------
-    path : PathLike
-        Directory path.
-
-    Returns
-    -------
-    Path
-        The directory path.
-    """
+    """Ensure a directory exists and return it."""
     p = as_path(path)
     p.mkdir(parents=True, exist_ok=True)
     return p
