@@ -393,10 +393,6 @@ Available at: https://github.com/casey-bell/my-tourism-stuff
 - Office for National Statistics
 - Email: [pop.info@ons.gov.uk](mailto:pop.info@ons.gov.uk)
 
-## Contributing
-
-Contributions are welcome! This project follows standard data science best practices:
-
 ### Development Workflow
 
 1. **Fork** the repository
@@ -434,21 +430,10 @@ Contributions are welcome! This project follows standard data science best pract
 - **Documentation**: Update README and docstrings when adding features
 - **Modular design**: Keep functions focused and reusable
 
-### Areas for Contribution
-
-- Adding new data sources or datasets
-- Improving data validation logic
-- Adding new analytical notebooks
-- Enhancing visualisations
-- Improving documentation
-- Adding more comprehensive tests
-- Performance optimisations
-
 ## Acknowledgments
 
 - **Office for National Statistics (ONS)** for providing open access to UK tourism data
 - **Python community** for the excellent data science ecosystem
-- **Contributors** who have helped improve this project
 Special thanks to:
 - The pandas development team for their powerful data manipulation library
 - The pytest team for the comprehensive testing framework
