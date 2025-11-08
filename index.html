@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>My Tourism Stuff</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+               max-width: 980px; margin: 40px auto; padding: 0 20px; line-height: 1.6; }
+        code { background: #f6f8fa; padding: 2px 6px; border-radius: 3px; }
+        pre { background: #f6f8fa; padding: 16px; border-radius: 6px; overflow: auto; }
+        h1, h2, h3 { border-bottom: 1px solid #eaecef; padding-bottom: 8px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #dfe2e5; padding: 8px 12px; }
+        th { background: #f6f8fa; }
+    </style>
+</head>
+<body>
+<h1>My Tourism Stuff</h1>
+<p><a href="https://github.com/casey-bell/my-tourism-stuff/actions/workflows/ci.yml"><img src="https://github.com/casey-bell/my-tourism-stuff/actions/workflows/ci.yml/badge.svg" alt="CI pipeline" /></a>
+<a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="Python 3.9+" /></a>
+<a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+<a href="https://github.com/psf/black"><img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black" /></a></p>
+<p>A data analysis pipeline for processing and analysing UK tourism statistics from the Office for National Statistics (ONS). This project provides reproducible ETL workflows, data validation, and analytical capabilities for exploring overseas visitor trends to Great Britain.</p>
+<h2>Table of Contents</h2>
+<ul>
+<li><a href="#features">Features</a></li>
+<li><a href="#project-structure">Project Structure</a></li>
+<li><a href="#dataset">Dataset</a></li>
+<li><a href="#quick-start">Quick Start</a></li>
+<li><a href="#development">Development</a></li>
+<li><a href="#data-pipeline">Data Pipeline</a></li>
+<li><a href="#examples">Examples</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+<li><a href="#technical-requirements">Technical Requirements</a></li>
+<li><a href="#data-source-and-licensing">Data Source and Licensing</a></li>
+<li><a href="#contact">Contact</a></li>
+<li><a href="#contributing">Contributing</a></li>
+<li><a href="#acknowledgments">Acknowledgments</a></li>
+</ul>
+<h2>Features</h2>
+<ul>
+<li><strong>Reproducible ETL pipeline</strong>: Fully scripted data processing from raw Excel files to analysis-ready datasets</li>
+<li><strong>Data validation</strong>: Schema enforcement and quality checks throughout the pipeline</li>
+<li><strong>Modular architecture</strong>: Separate components for loading, cleaning, transforming, and validating data</li>
+<li><strong>Comprehensive testing</strong>: Full test coverage for data operations with pytest</li>
+<li><strong>Interactive analysis</strong>: Jupyter notebooks for exploratory data analysis</li>
+<li><strong>CI/CD integration</strong>: Automated testing and deployment via GitHub Actions</li>
+<li><strong>Multiple data formats</strong>: Support for Excel, CSV, and Parquet formats</li>
+<li><strong>Command-line interface</strong>: Easy pipeline execution and data management via CLI</li>
+</ul>
+<h2>Project Structure</h2>
+<pre><code class="language-text">my-tourism-stuff/
+├── .github/
+│   └── workflows/
+│       ├── ci.yml                   # Continuous integration testing
+│       ├── deploy.yml               # Deployment pipeline
+│       └── lint.yml                 # Code quality checks
+├── data/
+│   ├── interim/                     # Processed intermediate data
+│   │   └── visitors_by_quarter.csv
+│   ├── processed/                   # Analysis-ready datasets
+│   │   └── visitors_quarterly.parquet
+│   └── raw/                         # Original source data (immutable)
+│       └── overseas-visitors-to-britain-2024.xlsx
+├── notebooks/
+│   ├── 01-ingest-and-clean.ipynb        # Data ingestion and cleaning
+│   └── 02-transform-and-validate.ipynb  # Data transformation and validation
+├── src/                             # Source code package
+│   ├── data/
+│   │   ├── clean.py                 # Data cleaning functions
+│   │   ├── load.py                  # Data loading utilities
+│   │   ├── schemas.py               # Data structure definitions
+│   │   ├── transform.py             # Data transformation logic
+│   │   └── validate.py              # Data validation functions
+│   ├── utils/
+│   │   └── io.py                    # I/O utility functions
+│   ├── cli.py                       # Command-line interface
+│   ├── config.py                    # Project configuration
+│   └── pipeline.py                  # Pipeline orchestration
+├── tests/                           # Test suite
+│   ├── test_clean.py
+│   ├── test_load.py
+│   ├── test_transform.py
+│   └── test_validate.py
+├── .gitignore
+├── LICENSE
+├── Makefile                         # Automation commands
+├── pyproject.toml                   # Project dependencies and configuration
+└── README.md
+</code></pre>
+<h2>Dataset</h2>
+<ul>
+<li>Source: Office for National Statistics (ONS)</li>
+<li>File: <code>data/raw/overseas-visitors-to-britain-2024.xlsx</code></li>
+</ul>
+<h3>Data characteristics</h3>
+<ul>
+<li>Period: Q1 2019 to Q4 2024 (quarterly)</li>
+<li>Coverage: UK (2019–2023) → Great Britain (2024 onwards)</li>
+</ul>
+<h3>Key metrics</h3>
+<ul>
+<li>Number of visits (thousands)</li>
+<li>Expenditure (£ million)</li>
+<li>Nights stayed (thousands)</li>
+</ul>
+<h3>Data breakdowns</h3>
+<ul>
+<li>Geography: North America, Europe, Other Countries</li>
+<li>Purpose: Holiday, Business, Visiting Friends and Relatives (VFR), Miscellaneous</li>
+<li>Transport: Air, sea and tunnel</li>
+<li>UK regions: All major UK regions visited</li>
+<li>Countries: Individual countries of residence</li>
+</ul>
+<h3>Important notes</h3>
+<ul>
+<li>Methodological break: Data from 2024 onwards covers Great Britain only (excluding Northern Ireland).</li>
+<li>Developmental statistics: These estimates are labelled as developmental whilst ONS methodologies are being refined.</li>
+<li>Analysis should account for the 2024 methodological break with appropriate handling.</li>
+</ul>
+<h2>Quick Start</h2>
+<h3>Prerequisites</h3>
+<ul>
+<li><strong>Python 3.9 or higher</strong> (check with <code>python --version</code>)</li>
+<li><strong>pip</strong> package manager</li>
+<li><strong>Poetry</strong> (optional, for dependency management - see <a href="https://python-poetry.org/docs/#installation">Poetry installation</a>)</li>
+<li><strong>Git</strong> for version control</li>
+</ul>
+<h3>Installation</h3>
+<h4>Option 1: Using pip (recommended for users)</h4>
+<pre><code class="language-bash"># Clone the repository
+git clone https://github.com/casey-bell/my-tourism-stuff.git
+cd my-tourism-stuff
+
+# Create and activate a virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install the project and its dependencies
+pip install -e .
+</code></pre>
+<h4>Option 2: Using Poetry (recommended for developers)</h4>
+<pre><code class="language-bash"># Clone the repository
+git clone https://github.com/casey-bell/my-tourism-stuff.git
+cd my-tourism-stuff
+
+# Install dependencies using Poetry
+poetry install
+
+# Activate the Poetry virtual environment
+poetry shell
+</code></pre>
+<h3>Running the Pipeline</h3>
+<pre><code class="language-bash"># Execute the complete data processing pipeline
+make all
+</code></pre>
+<p>Or using Poetry:</p>
+<pre><code class="language-bash">poetry run make all
+</code></pre>
+<h3>Manual Execution</h3>
+<p>For exploratory analysis or development:</p>
+<pre><code class="language-bash"># Run Jupyter notebooks
+jupyter notebook notebooks/
+</code></pre>
+<pre><code class="language-bash"># Or run the pipeline via CLI
+python -m src.cli run
+</code></pre>
+<pre><code class="language-bash"># List available CLI commands
+python -m src.cli --help
+</code></pre>
+<h2>Development</h2>
+<h3>Setting Up Development Environment</h3>
+<pre><code class="language-bash"># Install development dependencies
+poetry install --with dev
+
+# Or with pip
+pip install -e &quot;.[dev]&quot;
+</code></pre>
+<h3>Testing</h3>
+<pre><code class="language-bash"># Run the test suite
+pytest tests/
+</code></pre>
+<pre><code class="language-bash"># Run tests with coverage as per CI configuration
+pytest tests/ --cov=src --cov-report=term-missing
+</code></pre>
+<pre><code class="language-bash"># Run tests using Make (with Poetry)
+make test
+</code></pre>
+<h3>Code Quality</h3>
+<pre><code class="language-bash"># Format code with black and isort
+make format
+
+# Check code style (lint)
+make lint
+
+# Run static type checking
+make type-check
+
+# Run all checks (lint + type-check + test)
+make check
+</code></pre>
+<h3>CI/CD</h3>
+<p>The project uses GitHub Actions for continuous integration. On pushes and pull requests to the main branch, it runs:</p>
+<ul>
+<li><strong>Test suite</strong> with pytest</li>
+<li><strong>Code coverage</strong> reporting</li>
+<li><strong>Code quality</strong> linting (flake8, black, isort)</li>
+<li><strong>Type checking</strong> with mypy</li>
+<li><strong>Deployment</strong> checks</li>
+<li><strong>Dependency caching</strong> for faster builds</li>
+</ul>
+<h3>Available Make Commands</h3>
+<pre><code class="language-bash">make help         # Show all available commands
+make install      # Install production dependencies
+make install-dev  # Install development dependencies
+make test         # Run tests with coverage
+make lint         # Check code style
+make type-check   # Run static type checking
+make format       # Auto-format code
+make check        # Run all checks
+make all          # Run complete pipeline
+make data         # Process data only
+make pipeline     # Run data processing pipeline
+make notebook     # Execute analysis notebooks
+make clean        # Clean temporary files
+make clean-all    # Clean all generated files
+</code></pre>
+<h2>Data Pipeline</h2>
+<p>A reproducible data processing workflow:</p>
+<ol>
+<li><strong>Extract</strong>: Raw data from ONS Excel files in <code>data/raw/</code></li>
+<li><strong>Transform</strong>: Clean, validate and reshape data using modular components</li>
+<li><strong>Load</strong>: Output intermediate data to <code>data/interim/</code> and final datasets to <code>data/processed/</code></li>
+<li><strong>Validate</strong>: Data quality checks and schema validation in <code>src/data/validate.py</code></li>
+<li><strong>Test</strong>: Comprehensive test coverage for data operations in <code>tests/</code></li>
+</ol>
+<h3>Data Flow</h3>
+<pre><code>Raw Excel data → Interim CSV (for inspection) → Processed Parquet (for analysis)
+</code></pre>
+<ul>
+<li>All data processing is <strong>scripted and reproducible</strong></li>
+<li><strong>Schema enforcement</strong> through <code>src/data/schemas.py</code></li>
+<li><strong>Separation of concerns</strong>: raw, interim, and processed data directories</li>
+</ul>
+<h2>Examples</h2>
+<h3>Running Individual Pipeline Steps</h3>
+<pre><code class="language-bash"># Load and process data only
+python -m src.cli process-data
+
+# Run data validation
+python -m src.cli validate
+
+# Run data transformation
+python -m src.cli transform
+
+# List all data files and their sizes
+python -m src.cli ls-data
+</code></pre>
+<h3>Using Jupyter Notebooks</h3>
+<pre><code class="language-bash"># Start Jupyter Lab
+jupyter lab
+
+# Navigate to notebooks/ directory
+# Open and run:
+# - 01-ingest-and-clean.ipynb
+# - 02-transform-and-validate.ipynb
+</code></pre>
+<h3>Programmatic Access</h3>
+<pre><code class="language-python">from src.data import load, transform, validate
+
+# Load raw data
+data = load.load_raw_data()
+
+# Transform data
+transformed = transform.transform(data)
+
+# Validate output
+validate.validate_schema(transformed)
+</code></pre>
+<h2>Troubleshooting</h2>
+<h3>Common Issues</h3>
+<p><strong>Issue</strong>: <code>ModuleNotFoundError: No module named 'src'</code></p>
+<ul>
+<li><strong>Solution</strong>: Ensure you've installed the package with <code>pip install -e .</code> and are in the project root directory</li>
+</ul>
+<p><strong>Issue</strong>: <code>FileNotFoundError</code> when running pipeline</p>
+<ul>
+<li><strong>Solution</strong>: Ensure the raw data file exists in <code>data/raw/overseas-visitors-to-britain-2024.xlsx</code></li>
+</ul>
+<p><strong>Issue</strong>: Poetry command not found</p>
+<ul>
+<li><strong>Solution</strong>: Install Poetry following <a href="https://python-poetry.org/docs/#installation">official instructions</a> or use pip-based installation instead</li>
+</ul>
+<p><strong>Issue</strong>: Tests failing with import errors</p>
+<ul>
+<li><strong>Solution</strong>: Reinstall the package in editable mode: <code>pip install -e .</code></li>
+</ul>
+<p><strong>Issue</strong>: Notebook kernel not found</p>
+<ul>
+<li><strong>Solution</strong>: Install Jupyter in your virtual environment: <code>pip install jupyter jupyterlab</code></li>
+</ul>
+<h3>Getting Help</h3>
+<p>If you encounter issues not covered here:</p>
+<ol>
+<li>Check the <a href="https://github.com/casey-bell/my-tourism-stuff/issues">Issues page</a> for similar problems</li>
+<li>Run <code>make help</code> to see all available commands</li>
+<li>Enable debug logging: <code>python -m src.cli run --debug</code></li>
+</ol>
+<h2>Technical Requirements</h2>
+<ul>
+<li><strong>Python</strong>: 3.9 or higher (see <code>pyproject.toml</code> for exact version requirements)</li>
+<li><strong>Operating System</strong>: Linux, macOS, or Windows (with WSL recommended)</li>
+<li><strong>Memory</strong>: Minimum 4GB RAM recommended for data processing</li>
+<li><strong>Storage</strong>: ~500MB for repository and dependencies</li>
+</ul>
+<h3>Core Dependencies</h3>
+<ul>
+<li>pandas (&gt;=2.1.0) - Data manipulation</li>
+<li>numpy (&gt;=1.24.0) - Numerical computing</li>
+<li>openpyxl (&gt;=3.1.0) - Excel file reading</li>
+<li>pytest (&gt;=7.4.0) - Testing framework</li>
+<li>jupyter (&gt;=1.0.0) - Interactive notebooks</li>
+</ul>
+<p>All dependencies are managed via <code>pyproject.toml</code>. For the complete list, see the project configuration file.</p>
+<h2>Data Source and Licensing</h2>
+<h3>Data Source</h3>
+<ul>
+<li><strong>Provider</strong>: Office for National Statistics (ONS)</li>
+<li><strong>Dataset</strong>: Overseas Visitors to Britain</li>
+<li><strong>File</strong>: <code>data/raw/overseas-visitors-to-britain-2024.xlsx</code></li>
+<li><strong>Update Frequency</strong>: Quarterly</li>
+<li><strong>Official Source</strong>: <a href="https://www.ons.gov.uk/">ONS Travel and Tourism Statistics</a></li>
+</ul>
+<h3>Licensing</h3>
+<ul>
+<li><strong>Data License</strong>: Crown copyright, <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">Open Government Licence v3.0</a></li>
+<li><strong>Code License</strong>: MIT License (see <code>LICENSE</code> file)</li>
+</ul>
+<h3>Citation</h3>
+<p>If you use this project or the processed datasets, please cite:</p>
+<pre><code>Office for National Statistics (2024). Overseas Visitors to Britain.
+Retrieved from: https://www.ons.gov.uk/
+
+Data processing pipeline: Casey Bell (2025). my-tourism-stuff.
+Available at: https://github.com/casey-bell/my-tourism-stuff
+</code></pre>
+<h2>Contact</h2>
+<h3>Project maintainer</h3>
+<ul>
+<li>Name: Casey Bell</li>
+<li>Email: <a href="mailto:casey.bell.7@outlook.com">casey.bell.7@outlook.com</a></li>
+<li>LinkedIn: <a href="https://linkedin.com/in/casey-bell">casey-bell</a></li>
+</ul>
+<h3>Official data enquiries</h3>
+<ul>
+<li>Office for National Statistics</li>
+<li>Email: <a href="mailto:pop.info@ons.gov.uk">pop.info@ons.gov.uk</a></li>
+</ul>
+<h3>Development Workflow</h3>
+<ol>
+<li><strong>Fork</strong> the repository</li>
+<li><strong>Create</strong> a feature branch (<code>git checkout -b feature/amazing-feature</code>)</li>
+<li><strong>Set up</strong> your development environment:<pre><code class="language-bash">poetry install --with dev
+# or
+pip install -e &quot;.[dev]&quot;
+</code></pre>
+</li>
+<li><strong>Make</strong> your changes following the code style guidelines</li>
+<li><strong>Test</strong> your changes:<pre><code class="language-bash">make check  # Runs lint, type-check, and tests
+</code></pre>
+</li>
+<li><strong>Commit</strong> your changes (<code>git commit -m 'Add amazing feature'</code>)</li>
+<li><strong>Push</strong> to your branch (<code>git push origin feature/amazing-feature</code>)</li>
+<li><strong>Open</strong> a Pull Request</li>
+</ol>
+<h3>Code Style Guidelines</h3>
+<ul>
+<li>Follow <strong>PEP 8</strong> conventions</li>
+<li>Use <strong>black</strong> for code formatting (line length: 88)</li>
+<li>Use <strong>isort</strong> for import sorting</li>
+<li>Add <strong>type hints</strong> where appropriate</li>
+<li>Write <strong>docstrings</strong> for functions and classes</li>
+<li>Maintain test coverage above 80%</li>
+</ul>
+<h3>Project Principles</h3>
+<ul>
+<li><strong>Raw data is immutable</strong>: Never modify files in <code>data/raw/</code></li>
+<li><strong>All processing is scripted</strong>: No manual data manipulation</li>
+<li><strong>Reproducibility</strong>: Anyone should be able to run the pipeline and get the same results</li>
+<li><strong>Testing</strong>: All data processing logic must have corresponding tests</li>
+<li><strong>Documentation</strong>: Update README and docstrings when adding features</li>
+<li><strong>Modular design</strong>: Keep functions focused and reusable</li>
+</ul>
+<h2>Acknowledgments</h2>
+<ul>
+<li><strong>Office for National Statistics (ONS)</strong> for providing open access to UK tourism data</li>
+<li><strong>Python community</strong> for the excellent data science ecosystem
+Special thanks to:</li>
+<li>The pandas development team for their powerful data manipulation library</li>
+<li>The pytest team for the comprehensive testing framework</li>
+</ul>
+
+</body>
+</html>
