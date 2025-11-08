@@ -1,8 +1,8 @@
 import pandas as pd
 import pytest
 
-# The cleaning module is expected to expose a single entry-point function `clean`
-# that takes a DataFrame and returns a cleaned DataFrame.
+# The cleaning module is expected to expose a single entry-point function
+# `clean` that takes a DataFrame and returns a cleaned DataFrame.
 from src.data.clean import clean
 
 

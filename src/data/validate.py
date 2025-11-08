@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import pandas as pd
 
@@ -43,11 +43,20 @@ class ValidationResult:
     def warnings(self) -> List[ValidationIssue]:
         return [i for i in self.issues if i.level == "warning"]
 
-    def add_error(self, message: str, context: Optional[Dict[str, str]] = None) -> None:
-        self.issues.append(ValidationIssue(level="error", message=message, context=context))
+    def add_error(
+        self, message: str, context: Optional[Dict[str, str]] = None
+    ) -> None:
+        self.issues.append(
+            ValidationIssue(level="error", message=message, context=context)
+        )
 
-    def add_warning(self, message: str, context: Optional[Dict[str, str]] = None) -> None:
-        self.issues.append(ValidationIssue(level="warning", message=message, context=context))
+    def add_warning(
+        self, message: str, context: Optional[Dict[str, str]] = None
+    ) -> None:
+        self.issues.append(
+            ValidationIssue(level="warning", message=message,
+                            context=context)
+        )
 
     def raise_for_errors(self) -> None:
         if self.errors:
@@ -83,7 +92,9 @@ def _period_sort_key(s: str) -> Tuple[int, int]:
     return (-1, -1) if p is None else p
 
 
-def _check_required_columns(df: pd.DataFrame, required: Sequence[str], res: ValidationResult) -> None:
+def _check_required_columns(
+    df: pd.DataFrame, required: Sequence[str], res: ValidationResult
+) -> None:
     missing = [c for c in required if c not in df.columns]
     if missing:
         res.add_error(f"Missing required columns: {', '.join(missing)}")
@@ -105,43 +116,65 @@ def _is_numeric_series(s: pd.Series) -> bool:
     return not ((coerced.isna()) & (s.notna())).any()
 
 
-def _check_types(df: pd.DataFrame, schema_cols: Dict[str, Dict], res: ValidationResult) -> None:
+def _check_types(
+    df: pd.DataFrame, schema_cols: Dict[str, Dict], res: ValidationResult
+) -> None:
     for col, spec in schema_cols.items():
         if col not in df.columns:
-            # Requiredness is handled separately; skip type checks for truly missing columns
+            # Requiredness is handled separately; skip type checks for
+            # truly missing columns
             continue
 
         t = spec.get("type")
         if t == "number":
             if not _is_numeric_series(df[col]):
-                res.add_error(f"Type validation failed for '{col}': expected number.")
+                res.add_error(
+                    f"Type validation failed for '{col}': expected "
+                    f"number."
+                )
             # Non-negativity via "min" in schema
             if "min" in spec:
                 try:
-                    negatives = df[pd.to_numeric(df[col], errors="coerce") < spec["min"]]
+                    negatives = df[
+                        pd.to_numeric(df[col], errors="coerce")
+                        < spec["min"]
+                    ]
                     if not negatives.empty:
-                        res.add_error(f"Non-negative constraint violated in '{col}' (rows: {int(negatives.shape[0])}).")
+                        res.add_error(
+                            f"Non-negative constraint violated in "
+                            f"'{col}' (rows: {int(negatives.shape[0])})."
+                        )
                 except Exception:
                     # If coercion fails, type error will already be reported
                     pass
 
         elif t == "boolean":
             if not _is_boolean_series(df[col]):
-                res.add_error(f"Type validation failed for '{col}': expected boolean.")
+                res.add_error(
+                    f"Type validation failed for '{col}': expected "
+                    f"boolean."
+                )
 
         elif t == "string":
             # Strings are permissive; if a format is provided, enforce regex
             fmt = spec.get("format")
             if fmt is not None:
                 pattern = re.compile(fmt)
-                bad = df[col].dropna().astype(str).map(lambda x: pattern.match(x) is None)
+                bad = df[col].dropna().astype(str).map(
+                    lambda x: pattern.match(x) is None
+                )
                 if bad.any():
-                    res.add_error(f"Format validation failed for '{col}': regex '{fmt}' not matched.")
+                    res.add_error(
+                        f"Format validation failed for '{col}': regex "
+                        f"'{fmt}' not matched."
+                    )
 
         # Other types can be added as needed
 
 
-def _check_unique_keys(df: pd.DataFrame, unique_keys: Sequence[str], res: ValidationResult) -> None:
+def _check_unique_keys(
+    df: pd.DataFrame, unique_keys: Sequence[str], res: ValidationResult
+) -> None:
     if not unique_keys:
         return
     for key in unique_keys:
@@ -152,25 +185,33 @@ def _check_unique_keys(df: pd.DataFrame, unique_keys: Sequence[str], res: Valida
     if dup_mask.any():
         # Mention each key to satisfy test expectations
         res.add_error(
-            "Duplicate rows found across unique key(s): " + ", ".join(unique_keys)
+            "Duplicate rows found across unique key(s): "
+            + ", ".join(unique_keys)
         )
 
 
-def _check_period_continuity(df: pd.DataFrame, period_col: str, res: ValidationResult) -> None:
+def _check_period_continuity(
+    df: pd.DataFrame, period_col: str, res: ValidationResult
+) -> None:
     if period_col not in df.columns:
         res.add_error(f"Missing period column '{period_col}'.")
         return
 
     periods = df[period_col].dropna().astype(str).tolist()
-    # If any period fails format, continuity will be noisy; rely on format check to flag those
-    parsed = [_parse_period(p) for p in periods if _PERIOD_RE.match(p)]
+    # If any period fails format, continuity will be noisy; rely on
+    # format check to flag those
+    parsed = [
+        _parse_period(p) for p in periods if _PERIOD_RE.match(p)
+    ]
     if not parsed:
-        # If nothing parses, continuity cannot be determined; leave to format/type errors
+        # If nothing parses, continuity cannot be determined; leave to
+        # format/type errors
         return
 
     # De-duplicate and sort
     uniq = sorted(set(parsed))
     # Walk expected consecutive sequence
+
     def next_period(y: int, q: int) -> Tuple[int, int]:
         return (y + 1, 1) if q == 4 else (y, q + 1)
 
@@ -187,21 +228,30 @@ def _check_period_continuity(df: pd.DataFrame, period_col: str, res: ValidationR
         res.add_error("Period continuity gap detected: " + "; ".join(gaps))
 
 
-def _check_gb_only_from_2024(df: pd.DataFrame, period_col: str, gb_flag_col: str, res: ValidationResult) -> None:
+def _check_gb_only_from_2024(
+    df: pd.DataFrame, period_col: str, gb_flag_col: str,
+    res: ValidationResult
+) -> None:
     if period_col not in df.columns or gb_flag_col not in df.columns:
-        # If columns are missing, other checks will flag that; treat as type/required errors
+        # If columns are missing, other checks will flag that; treat as
+        # type/required errors
         return
 
     def is_2024_or_later(p: str) -> bool:
         parsed = _parse_period(p)
-        return parsed is not None and (parsed[0] > 2023 or (parsed[0] == 2024 and parsed[1] >= 1))
+        return parsed is not None and (
+            parsed[0] > 2023 or (parsed[0] == 2024 and parsed[1] >= 1)
+        )
 
     mask_late = df[period_col].astype(str).map(is_2024_or_later)
     subset = df.loc[mask_late, gb_flag_col]
     # Require boolean True on or after 2024-Q1
     bad = subset.map(lambda v: v is not True)
     if bad.any():
-        res.add_error("gb_only must be True from 2024 onwards due to Great Britain-only coverage.")
+        res.add_error(
+            "gb_only must be True from 2024 onwards due to Great "
+            "Britain-only coverage."
+        )
 
 
 # ---- Public API: schema-driven validation ----
@@ -254,7 +304,9 @@ def validate_dataframe(df: pd.DataFrame, schema: Dict) -> Dict[str, List[str]]:
     _check_period_continuity(df, period_col="period", res=res)
 
     # GB-only rule from 2024 onwards
-    _check_gb_only_from_2024(df, period_col="period", gb_flag_col="gb_only", res=res)
+    _check_gb_only_from_2024(
+        df, period_col="period", gb_flag_col="gb_only", res=res
+    )
 
     # Finalise
     res.raise_for_errors()

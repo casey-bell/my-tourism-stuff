@@ -20,17 +20,28 @@ EXPENDITURE_BY_PURPOSE_FILENAME: str = "expenditure_by_purpose.csv"
 NIGHTS_BY_GEOGRAPHY_FILENAME: str = "nights_by_geography.csv"
 DATA_DICTIONARY_FILENAME: str = "data_dictionary.json"
 
-VISITS_BY_QUARTER_PATH: Path = INTERIM_DIR / VISITS_BY_QUARTER_FILENAME
-EXPENDITURE_BY_PURPOSE_PATH: Path = INTERIM_DIR / EXPENDITURE_BY_PURPOSE_FILENAME
-NIGHTS_BY_GEOGRAPHY_PATH: Path = INTERIM_DIR / NIGHTS_BY_GEOGRAPHY_FILENAME
-DATA_DICTIONARY_PATH: Path = INTERIM_DIR / DATA_DICTIONARY_FILENAME
+VISITS_BY_QUARTER_PATH: Path = (
+    INTERIM_DIR / VISITS_BY_QUARTER_FILENAME
+)
+EXPENDITURE_BY_PURPOSE_PATH: Path = (
+    INTERIM_DIR / EXPENDITURE_BY_PURPOSE_FILENAME
+)
+NIGHTS_BY_GEOGRAPHY_PATH: Path = (
+    INTERIM_DIR / NIGHTS_BY_GEOGRAPHY_FILENAME
+)
+DATA_DICTIONARY_PATH: Path = (
+    INTERIM_DIR / DATA_DICTIONARY_FILENAME
+)
 
 # Core column names used across datasets
 COL_QUARTER: str = "quarter"
-COL_COVERAGE: str = "coverage"  # "UK" for 2019–2023, "Great Britain" for 2024 onwards
-COL_GEOGRAPHY: str = "geography"  # e.g., "Europe", "North America", "Other Countries"
+# "UK" for 2019–2023, "Great Britain" for 2024 onwards
+COL_COVERAGE: str = "coverage"
+# e.g., "Europe", "North America", "Other Countries"
+COL_GEOGRAPHY: str = "geography"
 COL_COUNTRY: str = "country"  # e.g., "France", "United States"
-COL_PURPOSE: str = "purpose"  # e.g., "Holiday", "Business", "VFR", "Miscellaneous"
+# e.g., "Holiday", "Business", "VFR", "Miscellaneous"
+COL_PURPOSE: str = "purpose"
 COL_TRANSPORT: str = "transport"  # e.g., "Air", "Sea", "Tunnel"
 
 COL_VISITS_K: str = "visits_thousands"
@@ -158,6 +169,7 @@ DATA_DICTIONARY_ENTRIES: Dict[str, Dict[str, str]] = {
         "unit": "thousands",
     },
 }
+
 
 # Helper functions
 def coverage_for_year(year: int) -> str:

@@ -1,8 +1,8 @@
 """
 Data loading utilities for the tourism project.
 
-Functions to read worksheets from the ONS Excel workbook, including the specific
-'Table 1' sheet with known header positioning.
+Functions to read worksheets from the ONS Excel workbook, including the
+specific 'Table 1' sheet with known header positioning.
 """
 
 from __future__ import annotations
@@ -29,7 +29,8 @@ def raw_file_path(filename: Optional[str] = None) -> Path:
     """
     Resolve the path to the raw Excel workbook.
 
-    If filename is not provided, uses the default expected file name within data/raw.
+    If filename is not provided, uses the default expected file name
+    within data/raw.
     """
     name = filename or DEFAULT_FILENAME
     path = RAW_DIR / name
@@ -50,7 +51,8 @@ def load_excel(
     Generic Excel worksheet loader.
 
     Parameters:
-    - path: Path to the workbook. If None, resolves to the default raw file path.
+    - path: Path to the workbook. If None, resolves to the default raw
+            file path.
     - sheet_name: Worksheet name or index to read.
     - header: Row index to use for column names.
     - engine: Excel engine to use (e.g., 'openpyxl').
@@ -77,9 +79,13 @@ def load_excel(
         return df
     except ValueError as e:
         # Common failure when a named sheet is missing
-        if isinstance(sheet_name, str) and f"Worksheet named '{sheet_name}' not found" in str(e):
+        if isinstance(sheet_name, str) and (
+            f"Worksheet named '{sheet_name}' not found" in str(e)
+        ):
             return pd.DataFrame()
-        raise ValueError(f"Failed to read worksheet '{sheet_name}' from workbook: {e}") from e
+        raise ValueError(
+            f"Failed to read worksheet '{sheet_name}' from workbook: {e}"
+        ) from e
     except Exception:
         return pd.DataFrame()
 

@@ -3,8 +3,9 @@ Clean and standardise overseas visitors dataset.
 
 Normalises column names and types, derives quarterly period labels,
 harmonises categorical fields, and returns a cleaned DataFrame with a
-normalised schema suitable for downstream processing and tests.
-Optional file-based helpers are provided for reading raw Excel and writing Parquet.
+normalised schema suitable for downstream processing and tests. Optional
+file-based helpers are provided for reading raw Excel and writing
+Parquet.
 """
 
 from __future__ import annotations
@@ -54,7 +55,8 @@ def _standardise_columns(df: pd.DataFrame) -> pd.DataFrame:
         "year": "year",
         "period": "period",  # may be parsed to year/quarter then rebuilt
 
-        # metrics (expected: visits_thousands, expenditure_millions, nights_thousands)
+        # metrics (expected: visits_thousands, expenditure_millions,
+        # nights_thousands)
         "visits": "visits_thousands",
         "number_of_visits": "visits_thousands",
         "number_of_visits_thousands": "visits_thousands",
@@ -90,7 +92,9 @@ def _coerce_numerics(df: pd.DataFrame) -> pd.DataFrame:
         return pd.to_numeric(series, errors="coerce").astype("Float64")
 
     # Coerce metrics to numeric with expected names
-    metric_cols = ["visits_thousands", "expenditure_millions", "nights_thousands"]
+    metric_cols = [
+        "visits_thousands", "expenditure_millions", "nights_thousands"
+    ]
     for col in metric_cols:
         if col in df.columns:
             df[col] = to_numeric(df[col])
@@ -100,7 +104,9 @@ def _coerce_numerics(df: pd.DataFrame) -> pd.DataFrame:
         mask = df["expenditure_millions"] > 1_000_000
         if mask.any():
             logging.info("Converting expenditure from GBP to millions.")
-            df.loc[mask, "expenditure_millions"] = df.loc[mask, "expenditure_millions"] / 1_000_000
+            df.loc[mask, "expenditure_millions"] = (
+                df.loc[mask, "expenditure_millions"] / 1_000_000
+            )
 
     # Enforce non-negative values across numeric metrics
     for col in metric_cols:
@@ -115,21 +121,29 @@ def _derive_quarter_and_period(df: pd.DataFrame) -> pd.DataFrame:
 
     # Try existing year + quarter codes
     if "year" in df.columns and "quarter" in df.columns:
-        q = df["quarter"].astype(str).str.upper().str.extract(r"(\d)").squeeze()
+        q = (df["quarter"].astype(str).str.upper()
+             .str.extract(r"(\d)").squeeze())
         df["quarter"] = "Q" + q.fillna("").replace("", np.nan)
 
     # If only a free-form period is present, parse year and quarter from it
-    if "period" in df.columns and (("year" not in df.columns) or ("quarter" not in df.columns)):
+    if "period" in df.columns and (
+        ("year" not in df.columns) or ("quarter" not in df.columns)
+    ):
         period = df["period"].astype(str).str.upper()
         year = period.str.extract(r"(20\d{2})", expand=False)
         q = period.str.extract(r"Q([1-4])", expand=False)
         df["year"] = pd.to_numeric(year, errors="coerce")
-        df["quarter"] = q.where(q.isin(["1", "2", "3", "4"]), np.nan).map(lambda x: f"Q{x}" if pd.notna(x) else np.nan)
+        df["quarter"] = q.where(
+            q.isin(["1", "2", "3", "4"]), np.nan
+        ).map(lambda x: f"Q{x}" if pd.notna(x) else np.nan)
 
     # Build the expected string label 'period' as "Q# YYYY"
     if "year" in df.columns and "quarter" in df.columns:
         valid_q = df["quarter"].isin(["Q1", "Q2", "Q3", "Q4"])
-        df.loc[valid_q, "period"] = df.loc[valid_q, "quarter"] + " " + df.loc[valid_q, "year"].astype("Int64").astype(str)
+        df.loc[valid_q, "period"] = (
+            df.loc[valid_q, "quarter"] + " "
+            + df.loc[valid_q, "year"].astype("Int64").astype(str)
+        )
     else:
         df["period"] = pd.NA
 
@@ -183,9 +197,13 @@ def _normalise_categories(df: pd.DataFrame) -> pd.DataFrame:
 
 def _add_coverage_flag(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    # Coverage is United Kingdom up to 2023; Great Britain from 2024 onwards
+    # Coverage is United Kingdom up to 2023; Great Britain from 2024
+    # onwards
     if "year" in df.columns:
-        df["coverage"] = np.where(df["year"].fillna(0) >= 2024, "Great Britain", "United Kingdom")
+        df["coverage"] = np.where(
+            df["year"].fillna(0) >= 2024, "Great Britain",
+            "United Kingdom"
+        )
     else:
         df["coverage"] = pd.NA
     return df
@@ -230,8 +248,9 @@ def _finalise_schema(df: pd.DataFrame) -> pd.DataFrame:
 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Pure cleaning function: accepts a DataFrame and returns a cleaned DataFrame.
-    No file I/O occurs in this function (suitable for unit tests).
+    Pure cleaning function: accepts a DataFrame and returns a cleaned
+    DataFrame. No file I/O occurs in this function (suitable for unit
+    tests).
     """
     logging.info("Standardising column names.")
     df = _standardise_columns(df)
@@ -279,7 +298,8 @@ def write_parquet(df: pd.DataFrame, output_path: Path) -> Path:
 
 def clean_file(input_path: Path, output_path: Path) -> Path:
     """
-    File-based cleaning entry point: reads raw Excel, cleans, and writes Parquet.
+    File-based cleaning entry point: reads raw Excel, cleans, and
+    writes Parquet.
     """
     raw_df = read_raw_excel(input_path)
     cleaned_df = clean(raw_df)
@@ -287,7 +307,9 @@ def clean_file(input_path: Path, output_path: Path) -> Path:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Clean and standardise the raw visitors dataset.")
+    parser = argparse.ArgumentParser(
+        description="Clean and standardise the raw visitors dataset."
+    )
     parser.add_argument(
         "--input",
         type=Path,

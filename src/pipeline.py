@@ -1,21 +1,24 @@
 import sys
 from pathlib import Path
 
-import pandas as pd
-
+# Adjust path to enable imports from project root
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.data.load import load_table_1
-from src.data.clean import clean, DEFAULT_INPUT, DEFAULT_OUTPUT
-from src.data.transform import (
+import pandas as pd  # noqa: E402
+
+from src.data.load import load_table_1  # noqa: E402
+from src.data.clean import clean, DEFAULT_INPUT, DEFAULT_OUTPUT  # noqa: E402
+from src.data.transform import (  # noqa: E402
     harmonise_columns,
     normalise_quarter_label,
     annotate_coverage,
 )
 
 # Paths
-QUARTERLY_OUTPUT = project_root / "data" / "interim" / "visitors_by_quarter.csv"
+QUARTERLY_OUTPUT = (
+    project_root / "data" / "interim" / "visitors_by_quarter.csv"
+)
 
 
 def make_visitors_by_quarter():
@@ -41,7 +44,10 @@ def make_visitors_by_quarter():
     df["quarter"] = df["period"].astype(str).apply(normalise_quarter_label)
 
     # Extract year from normalized quarter
-    df["year"] = df["quarter"].astype(str).str.extract(r"(\d{4})")[0].astype("Int64")
+    df["year"] = (
+        df["quarter"].astype(str).str.extract(r"(\d{4})")[0]
+        .astype("Int64")
+    )
 
     # Add coverage annotation (UK vs GB, etc.)
     df = annotate_coverage(df)
@@ -69,8 +75,12 @@ def make_visitors_by_quarter():
         return pd.DataFrame()
 
     # 6) Create period_q in the desired format
-    quarter_num = df_quarterly["quarter"].astype(str).str.extract(r"Q(\d)")[0]
-    df_quarterly["period_q"] = df_quarterly["year"].astype(str) + " Q" + quarter_num
+    quarter_num = (
+        df_quarterly["quarter"].astype(str).str.extract(r"Q(\d)")[0]
+    )
+    df_quarterly["period_q"] = (
+        df_quarterly["year"].astype(str) + " Q" + quarter_num
+    )
 
     # 7) Select, sort, and rename final columns
     visitors_by_quarter = df_quarterly[
@@ -81,7 +91,9 @@ def make_visitors_by_quarter():
         ["year", "quarter"]
     ).reset_index(drop=True)
 
-    visitors_by_quarter = visitors_by_quarter.dropna(subset=["visits_thousands"])
+    visitors_by_quarter = visitors_by_quarter.dropna(
+        subset=["visits_thousands"]
+    )
 
     # 8) Write CSV
     QUARTERLY_OUTPUT.parent.mkdir(parents=True, exist_ok=True)

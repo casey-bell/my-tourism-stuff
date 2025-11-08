@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import pytest
 
 from src.data.transform import (
@@ -83,7 +82,9 @@ def test_aggregate_produces_correct_views():
     tidy_df = pd.DataFrame(
         {
             "quarter": ["2019Q1", "2019Q1", "2019Q2", "2019Q2"],
-            "geography": ["Europe", "Europe", "North America", "North America"],
+            "geography": [
+                "Europe", "Europe", "North America", "North America"
+            ],
             "purpose": ["Holiday", "Business", "Holiday", "Business"],
             "transport": ["Air", "Air", "Air", "Air"],
             "coverage": [

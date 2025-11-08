@@ -18,10 +18,12 @@ def setup_logging(level: int = DEFAULT_LOG_LEVEL) -> None:
     logging.basicConfig(level=level, format=LOG_FORMAT)
 
 
-def resolve_callable(module_path: str, attr_names: tuple[str, ...]) -> Optional[Callable]:
+def resolve_callable(
+    module_path: str, attr_names: tuple[str, ...]
+) -> Optional[Callable]:
     """
-    Try to import a callable from the given module path using several attribute names.
-    Returns the first callable found, or None.
+    Try to import a callable from the given module path using several
+    attribute names. Returns the first callable found, or None.
     """
     try:
         module = __import__(module_path, fromlist=["*"])
@@ -35,18 +37,25 @@ def resolve_callable(module_path: str, attr_names: tuple[str, ...]) -> Optional[
             logging.debug("Resolved %s.%s", module_path, name)
             return candidate
 
-    logging.debug("No callable found in %s for names %s", module_path, attr_names)
+    logging.debug(
+        "No callable found in %s for names %s", module_path, attr_names
+    )
     return None
 
 
 def run_pipeline() -> int:
     """
-    Run the project's pipeline. This function attempts to locate a sensible entry point
-    in src.pipeline (common names: run, main, run_pipeline) and invoke it.
+    Run the project's pipeline. This function attempts to locate a
+    sensible entry point in src.pipeline (common names: run, main,
+    run_pipeline) and invoke it.
     """
-    entry = resolve_callable("src.pipeline", ("run_pipeline", "run", "main"))
+    entry = resolve_callable(
+        "src.pipeline", ("run_pipeline", "run", "main")
+    )
     if entry is None:
-        logging.error("Could not locate a pipeline entry point in src.pipeline")
+        logging.error(
+            "Could not locate a pipeline entry point in src.pipeline"
+        )
         return 2
 
     try:
@@ -116,19 +125,33 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub_run = sub.add_parser("run", help="Execute the full pipeline")
-    sub_run.add_argument("--debug", action="store_true", help="Enable debug logging")
+    sub_run.add_argument(
+        "--debug", action="store_true", help="Enable debug logging"
+    )
 
-    sub_process = sub.add_parser("process-data", help="Run data loading and processing step")
-    sub_process.add_argument("--debug", action="store_true", help="Enable debug logging")
+    sub_process = sub.add_parser(
+        "process-data", help="Run data loading and processing step"
+    )
+    sub_process.add_argument(
+        "--debug", action="store_true", help="Enable debug logging"
+    )
 
     sub_validate = sub.add_parser("validate", help="Run data validation")
-    sub_validate.add_argument("--debug", action="store_true", help="Enable debug logging")
+    sub_validate.add_argument(
+        "--debug", action="store_true", help="Enable debug logging"
+    )
 
     sub_transform = sub.add_parser("transform", help="Run data transformation")
-    sub_transform.add_argument("--debug", action="store_true", help="Enable debug logging")
+    sub_transform.add_argument(
+        "--debug", action="store_true", help="Enable debug logging"
+    )
 
-    sub_ls = sub.add_parser("ls-data", help="List files under data/ and their sizes")
-    sub_ls.add_argument("--path", default="data", help="Path to data directory")
+    sub_ls = sub.add_parser(
+        "ls-data", help="List files under data/ and their sizes"
+    )
+    sub_ls.add_argument(
+        "--path", default="data", help="Path to data directory"
+    )
 
     return parser.parse_args(argv)
 
@@ -154,7 +177,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     argv = list(argv or sys.argv[1:])
     args = parse_args(argv)
 
-    level = logging.DEBUG if getattr(args, "debug", False) else DEFAULT_LOG_LEVEL
+    level = logging.DEBUG if getattr(
+        args, "debug", False
+    ) else DEFAULT_LOG_LEVEL
     setup_logging(level)
 
     if args.command == "run":

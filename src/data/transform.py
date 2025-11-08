@@ -15,8 +15,10 @@ Expected wide-form columns (case-insensitive, spaces/dashes allowed):
 - nights             (number of nights)
 
 Usage (examples):
-  python -m src.data.transform --input data/clean/cleaned.csv --out-interim data/interim --out-tables outputs/tables
-  python -m src.data.transform --input data/clean/cleaned.parquet --export --out-tables outputs/tables
+  python -m src.data.transform --input data/clean/cleaned.csv \
+    --out-interim data/interim --out-tables outputs/tables
+  python -m src.data.transform --input data/clean/cleaned.parquet \
+    --export --out-tables outputs/tables
 """
 
 from __future__ import annotations
@@ -50,7 +52,10 @@ ALTERNATE_COL_MAP = {
     "purpose": {"purpose", "reason", "intent"},
     "transport": {"transport", "mode", "mode_of_transport"},
     "visits": {"visits", "number_of_visits", "visit_count"},
-    "expenditure": {"expenditure", "spend", "expenditure_millions", "£m", "gbp_millions"},
+    "expenditure": {
+        "expenditure", "spend", "expenditure_millions", "£m",
+        "gbp_millions"
+    },
     "nights": {"nights", "night_count", "overnights"},
 }
 
@@ -174,7 +179,10 @@ VALUE_COLS_DEFAULT = ["visits", "expenditure_millions", "nights"]
 def to_tidy(
     df: pd.DataFrame,
     value_cols: Iterable[str] = VALUE_COLS_DEFAULT,
-    id_cols: Iterable[str] = ("quarter", "geography", "purpose", "transport", "coverage", "method_break"),
+    id_cols: Iterable[str] = (
+        "quarter", "geography", "purpose", "transport", "coverage",
+        "method_break"
+    ),
 ) -> pd.DataFrame:
     """Melt wide metrics into tidy long format."""
     missing = [c for c in value_cols if c not in df.columns]
@@ -192,7 +200,10 @@ def to_tidy(
         value_name="value",
     )
     # Stable ordering
-    tidy = tidy.sort_values(["quarter", "geography", "purpose", "transport", "metric"], ignore_index=True)
+    tidy = tidy.sort_values(
+        ["quarter", "geography", "purpose", "transport", "metric"],
+        ignore_index=True
+    )
     return tidy
 
 
@@ -200,20 +211,23 @@ def aggregate(df_tidy: pd.DataFrame) -> dict[str, pd.DataFrame]:
     """Produce common aggregated views from tidy data."""
     # By geography and quarter
     by_region = (
-        df_tidy.groupby(["quarter", "coverage", "geography", "metric"], as_index=False)
-        .agg(value=("value", "sum"))
+        df_tidy.groupby(
+            ["quarter", "coverage", "geography", "metric"], as_index=False
+        ).agg(value=("value", "sum"))
     )
 
     # By purpose and quarter
     by_purpose = (
-        df_tidy.groupby(["quarter", "coverage", "purpose", "metric"], as_index=False)
-        .agg(value=("value", "sum"))
+        df_tidy.groupby(
+            ["quarter", "coverage", "purpose", "metric"], as_index=False
+        ).agg(value=("value", "sum"))
     )
 
     # By transport and quarter
     by_transport = (
-        df_tidy.groupby(["quarter", "coverage", "transport", "metric"], as_index=False)
-        .agg(value=("value", "sum"))
+        df_tidy.groupby(
+            ["quarter", "coverage", "transport", "metric"], as_index=False
+        ).agg(value=("value", "sum"))
     )
 
     return {
@@ -269,7 +283,9 @@ def transform(
     df = harmonise_columns(df)
 
     # Ensure required columns exist
-    required = ["quarter", "geography", "purpose", "transport"] + list(value_cols)
+    required = [
+        "quarter", "geography", "purpose", "transport"
+    ] + list(value_cols)
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise KeyError(f"Input missing required columns: {missing}")
@@ -301,9 +317,18 @@ def transform(
     if export_tables and out_tables_dir:
         out_tables_dir.mkdir(parents=True, exist_ok=True)
         write_csv(tidy, out_tables_dir / "tidy.csv")
-        write_csv(aggs["region"], out_tables_dir / "visits_expenditure_nights_by_region_qtr.csv")
-        write_csv(aggs["purpose"], out_tables_dir / "visits_expenditure_nights_by_purpose_qtr.csv")
-        write_csv(aggs["transport"], out_tables_dir / "visits_expenditure_nights_by_transport_qtr.csv")
+        write_csv(
+            aggs["region"],
+            out_tables_dir / "visits_expenditure_nights_by_region_qtr.csv"
+        )
+        write_csv(
+            aggs["purpose"],
+            out_tables_dir / "visits_expenditure_nights_by_purpose_qtr.csv"
+        )
+        write_csv(
+            aggs["transport"],
+            out_tables_dir / "visits_expenditure_nights_by_transport_qtr.csv"
+        )
 
     result: dict[str, pd.DataFrame] = {"tidy": tidy, **aggs}
     return result
@@ -311,7 +336,10 @@ def transform(
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Transform cleaned tourism data into tidy tables and aggregates."
+        description=(
+            "Transform cleaned tourism data into tidy tables and "
+            "aggregates."
+        )
     )
     parser.add_argument(
         "--input",

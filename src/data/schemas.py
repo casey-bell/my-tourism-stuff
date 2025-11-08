@@ -13,7 +13,7 @@ manually.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, Optional, Tuple, Union
 import re
 
 
@@ -21,7 +21,9 @@ import re
 # Enumerations and constants
 # ---------------------------
 
-GEOGRAPHY_GROUPS: Tuple[str, ...] = ("North America", "Europe", "Other Countries")
+GEOGRAPHY_GROUPS: Tuple[str, ...] = (
+    "North America", "Europe", "Other Countries"
+)
 
 PURPOSES: Tuple[str, ...] = ("Holiday", "Business", "VFR", "Miscellaneous")
 
@@ -193,22 +195,49 @@ def quarterly_visitors_schema() -> Schema:
     Columns:
     - year, quarter, period, coverage (as above)
     - visits_k, expenditure_m_gbp, nights_k (aggregated)
-    - visits_per_night: visits_k / nights_k (float; non-negative, may be NaN if nights_k=0)
-    - spend_per_visit: expenditure_m_gbp / visits_k (float; non-negative, may be NaN if visits_k=0)
+    - visits_per_night: visits_k / nights_k (float; non-negative, may
+      be NaN if nights_k=0)
+    - spend_per_visit: expenditure_m_gbp / visits_k (float;
+      non-negative, may be NaN if visits_k=0)
     """
     fields = (
-        FieldSpec(name="year", py_type=int, min_value=2019, description="Calendar year."),
-        FieldSpec(name="quarter", py_type=int, validator=lambda x: isinstance(x, int) and 1 <= x <= 4,
-                  description="Quarter number (1–4)."),
-        FieldSpec(name="period", py_type=str, regex=PERIOD_PATTERN, description="Period label 'YYYYQn'."),
-        FieldSpec(name="coverage", py_type=str, allowed_values=COVERAGE_VALUES, description="Geographical coverage."),
-        FieldSpec(name="visits_k", py_type=(int, float), min_value=0.0, description="Visits (thousands)."),
-        FieldSpec(name="expenditure_m_gbp", py_type=(int, float), min_value=0.0, description="Expenditure (£ millions)."),
-        FieldSpec(name="nights_k", py_type=(int, float), min_value=0.0, description="Nights (thousands)."),
-        FieldSpec(name="visits_per_night", py_type=(int, float), min_value=0.0,
-                  description="Visits per night (derived)."),
-        FieldSpec(name="spend_per_visit", py_type=(int, float), min_value=0.0,
-                  description="Spend per visit (derived)."),
+        FieldSpec(
+            name="year", py_type=int, min_value=2019,
+            description="Calendar year."
+        ),
+        FieldSpec(
+            name="quarter", py_type=int,
+            validator=lambda x: isinstance(x, int) and 1 <= x <= 4,
+            description="Quarter number (1–4)."
+        ),
+        FieldSpec(
+            name="period", py_type=str, regex=PERIOD_PATTERN,
+            description="Period label 'YYYYQn'."
+        ),
+        FieldSpec(
+            name="coverage", py_type=str, allowed_values=COVERAGE_VALUES,
+            description="Geographical coverage."
+        ),
+        FieldSpec(
+            name="visits_k", py_type=(int, float), min_value=0.0,
+            description="Visits (thousands)."
+        ),
+        FieldSpec(
+            name="expenditure_m_gbp", py_type=(int, float), min_value=0.0,
+            description="Expenditure (£ millions)."
+        ),
+        FieldSpec(
+            name="nights_k", py_type=(int, float), min_value=0.0,
+            description="Nights (thousands)."
+        ),
+        FieldSpec(
+            name="visits_per_night", py_type=(int, float), min_value=0.0,
+            description="Visits per night (derived)."
+        ),
+        FieldSpec(
+            name="spend_per_visit", py_type=(int, float), min_value=0.0,
+            description="Spend per visit (derived)."
+        ),
     )
     return Schema(
         name="quarterly_visitors",
@@ -227,4 +256,24 @@ def validation_report_schema() -> Schema:
     - status: 'pass' | 'fail'
     - checks_run: integer count of checks executed
     - failures: integer count of failed checks
-    - messages: list of
+    - messages: list of validation messages
+    """
+    fields = (
+        FieldSpec(name="dataset", py_type=str,
+                  description="Name of the dataset validated."),
+        FieldSpec(name="timestamp", py_type=str,
+                  description="ISO 8601 timestamp of validation run."),
+        FieldSpec(name="status", py_type=str,
+                  description="Validation status: 'pass' or 'fail'."),
+        FieldSpec(name="checks_run", py_type=int, min_value=0,
+                  description="Count of checks executed."),
+        FieldSpec(name="failures", py_type=int, min_value=0,
+                  description="Count of failed checks."),
+        FieldSpec(name="messages", py_type=list,
+                  description="List of validation messages."),
+    )
+    return Schema(
+        name="validation_report",
+        fields=fields,
+        description="Validation report schema."
+    )
