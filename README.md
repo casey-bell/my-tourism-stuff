@@ -38,9 +38,8 @@ A data analysis pipeline for processing and analysing UK tourism statistics from
 my-tourism-stuff/
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml                   # Continuous integration testing
-│       ├── deploy.yml               # Deployment pipeline
-│       └── lint.yml                 # Code quality checks
+│       ├── ci.yml                   # CI pipeline (tests and linting)
+│       └── deploy.yml               # Deployment pipeline
 ├── data/
 │   ├── interim/                     # Processed intermediate data
 │   │   └── visitors_by_quarter.csv
@@ -55,13 +54,9 @@ my-tourism-stuff/
 │   ├── data/
 │   │   ├── clean.py                 # Data cleaning functions
 │   │   ├── load.py                  # Data loading utilities
-│   │   ├── schemas.py               # Data structure definitions
 │   │   ├── transform.py             # Data transformation logic
 │   │   └── validate.py              # Data validation functions
-│   ├── utils/
-│   │   └── io.py                    # I/O utility functions
 │   ├── cli.py                       # Command-line interface
-│   ├── config.py                    # Project configuration
 │   └── pipeline.py                  # Pipeline orchestration
 ├── tests/                           # Test suite
 │   ├── test_clean.py
@@ -221,12 +216,9 @@ make check
 
 The project uses GitHub Actions for continuous integration. On pushes and pull requests to the main branch, it runs:
 
-- **Test suite** with pytest
-- **Code coverage** reporting
-- **Code quality** linting (flake8, black, isort)
-- **Type checking** with mypy
-- **Deployment** checks
-- **Dependency caching** for faster builds
+- **Test suite** with pytest and coverage reporting
+- **Code quality** linting with flake8
+- **Deployment** to GitHub Pages for documentation
 
 ### Available Make Commands
 
