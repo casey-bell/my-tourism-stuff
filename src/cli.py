@@ -51,12 +51,14 @@ def validate_data() -> int:
     """Run data validation.
 
     Uses ValidationResult if the validation function returns it.
-    Looks for a callable named `run_validations` or `validate` in src.data.validate.
+    Looks for a callable named `run_validations` or `validate`
+    in src.data.validate.
     """
     try:
         validate_mod = importlib.import_module("src.data.validate")
-        validate_fn = getattr(validate_mod, "run_validations", None) or getattr(
-            validate_mod, "validate", None
+        validate_fn = (
+            getattr(validate_mod, "run_validations", None)
+            or getattr(validate_mod, "validate", None)
         )
 
         if callable(validate_fn):
@@ -80,7 +82,9 @@ def validate_data() -> int:
                     # Try to surface some detail if available
                     errors = getattr(result, "errors", None)
                     if errors:
-                        logging.error("Validation failed with %d errors", len(errors))
+                        logging.error(
+                            "Validation failed with %d errors", len(errors)
+                        )
                     else:
                         logging.error("Validation failed")
                     return 1
@@ -117,7 +121,9 @@ def transform_data() -> int:
         except Exception:
             pass
         if n_cols is not None:
-            logging.info("Transformation completed successfully with %d columns", n_cols)
+            logging.info(
+                "Transformation completed successfully with %d columns", n_cols
+            )
         else:
             logging.info("Transformation completed successfully")
         return 0
@@ -129,27 +135,59 @@ def transform_data() -> int:
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="my-tourism-cli",
-        description="Run the my-tourism-stuff data pipeline and related tasks",
+        description=(
+            "Run the my-tourism-stuff data pipeline and related tasks"
+        ),
     )
 
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub_run = sub.add_parser("run", help="Execute the full pipeline")
-    sub_run.add_argument("--debug", action="store_true", help="Enable debug logging")
+    sub_run.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+    )
 
     sub_process = sub.add_parser(
-        "process-data", help="Run data loading and processing step"
+        "process-data",
+        help="Run data loading and processing step",
     )
-    sub_process.add_argument("--debug", action="store_true", help="Enable debug logging")
+    sub_process.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+    )
 
-    sub_validate = sub.add_parser("validate", help="Run data validation")
-    sub_validate.add_argument("--debug", action="store_true", help="Enable debug logging")
+    sub_validate = sub.add_parser(
+        "validate",
+        help="Run data validation",
+    )
+    sub_validate.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+    )
 
-    sub_transform = sub.add_parser("transform", help="Run data transformation")
-    sub_transform.add_argument("--debug", action="store_true", help="Enable debug logging")
+    sub_transform = sub.add_parser(
+        "transform",
+        help="Run data transformation",
+    )
+    sub_transform.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+    )
 
-    sub_ls = sub.add_parser("ls-data", help="List files under data/ and their sizes")
-    sub_ls.add_argument("--path", default="data", help="Path to data directory")
+    sub_ls = sub.add_parser(
+        "ls-data",
+        help="List files under data/ and their sizes",
+    )
+    sub_ls.add_argument(
+        "--path",
+        default="data",
+        help="Path to data directory",
+    )
 
     return parser.parse_args(argv)
 
@@ -164,9 +202,11 @@ def list_data(path: str) -> int:
         if fp.is_file():
             try:
                 size_kb = fp.stat().st_size / 1024
-                print(f"{fp.relative_to(Path.cwd())} - {size_kb:.1f} KB")
+                rel = fp.relative_to(Path.cwd())
+                print(f"{rel} - {size_kb:.1f} KB")
             except Exception:
-                print(f"{fp.relative_to(Path.cwd())} - size unavailable")
+                rel = fp.relative_to(Path.cwd())
+                print(f"{rel} - size unavailable")
 
     return 0
 
