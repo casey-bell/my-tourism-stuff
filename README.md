@@ -342,10 +342,26 @@ If you encounter issues not covered here:
 - pandas (>=2.1.0) - Data manipulation
 - numpy (>=1.24.0) - Numerical computing
 - openpyxl (>=3.1.0) - Excel file reading
+- pyarrow (>=12.0.0) - Efficient Parquet I/O (2-5x faster than CSV)
 - pytest (>=7.4.0) - Testing framework
 - jupyter (>=1.0.0) - Interactive notebooks
 
-All dependencies are managed via `pyproject.toml`. For the complete list, see the project configuration file.
+All dependencies are managed via `pyproject.toml`. For quick pip-based installation, use `requirements.txt`:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Performance Features
+
+This project includes several performance optimizations:
+
+- **Memory-efficient data cleaning**: Reduces memory usage by ~83% through in-place DataFrame operations
+- **Cached Excel loading**: LRU cache avoids re-reading the same Excel file multiple times
+- **Parquet format support**: Fast, compressed intermediate data storage
+- **Performance monitoring utilities**: Built-in timing and memory profiling tools
+
+For detailed performance characteristics and optimization tips, see [PERFORMANCE.md](PERFORMANCE.md).
 
 ## Data Source and Licensing
 

@@ -50,6 +50,9 @@ site/
 *.swo
 *~
 .nova/
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
 # OS
 .DS_Store
@@ -75,6 +78,8 @@ nosetests.xml
 coverage.xml
 *.cover
 hypothesis/
+.tox/
+.nox/
 
 # Package management
 .python-version
@@ -82,6 +87,8 @@ Pipfile
 Pipfile.lock
 poetry.lock
 __pypackages__/
+pip-log.txt
+pip-delete-this-directory.txt
 
 # Temporary files
 *.tmp
