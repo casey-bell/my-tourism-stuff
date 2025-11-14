@@ -9,7 +9,7 @@ import pandas as pd  # noqa: E402
 
 from src.data.load import load_table_1  # noqa: E402
 from src.data.clean import (  # noqa: E402
-    clean,
+    clean_file,
     DEFAULT_INPUT,
     DEFAULT_OUTPUT,
 )
@@ -48,11 +48,11 @@ def make_visitors_by_quarter(
     print("🔄 Starting visitors_by_quarter generation...")
 
     # 0) Ensure the cleaned dataset is (re)generated using the canonical
-    #    clean() entrypoint
+    #    clean_file() entrypoint
     print(
         f"🧼 Cleaning data from {input_path} -> {cleaned_output_path} ..."
     )
-    clean(input_path, cleaned_output_path)
+    clean_file(input_path, cleaned_output_path)
 
     # 1) Load the cleaned data using the specialized loader
     print("📥 Loading cleaned Table 1 data...")
