@@ -89,7 +89,8 @@ def validate_data() -> int:
                         logging.error("Validation failed")
                     return 1
             else:
-                # If not a ValidationResult, still consider completion a success
+                # If not a ValidationResult, still consider completion a
+                # success
                 logging.info("Validation function completed")
                 return 0
         else:
@@ -114,7 +115,8 @@ def transform_data() -> int:
         df = load_table_1()
         # Use harmonise_columns explicitly as requested
         transformed = harmonise_columns(df)
-        # Best-effort informative logging without assuming DataFrame specifics
+        # Best-effort informative logging without assuming DataFrame
+        # specifics
         n_cols = None
         try:
             n_cols = transformed.shape[1]  # type: ignore[attr-defined]
@@ -122,7 +124,8 @@ def transform_data() -> int:
             pass
         if n_cols is not None:
             logging.info(
-                "Transformation completed successfully with %d columns", n_cols
+                "Transformation completed successfully with %d columns",
+                n_cols,
             )
         else:
             logging.info("Transformation completed successfully")
@@ -215,7 +218,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     argv = list(argv or sys.argv[1:])
     args = parse_args(argv)
 
-    level = logging.DEBUG if getattr(args, "debug", False) else DEFAULT_LOG_LEVEL
+    level = (
+        logging.DEBUG
+        if getattr(args, "debug", False)
+        else DEFAULT_LOG_LEVEL
+    )
     setup_logging(level)
 
     if args.command == "run":
