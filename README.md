@@ -342,10 +342,15 @@ If you encounter issues not covered here:
 - pandas (>=2.1.0) - Data manipulation
 - numpy (>=1.24.0) - Numerical computing
 - openpyxl (>=3.1.0) - Excel file reading
+- pyarrow (>=12.0.0) - Efficient Parquet I/O (2-5x faster than CSV)
 - pytest (>=7.4.0) - Testing framework
 - jupyter (>=1.0.0) - Interactive notebooks
 
-All dependencies are managed via `pyproject.toml`. For the complete list, see the project configuration file.
+All dependencies are managed via `pyproject.toml`. For quick pip-based installation, use `requirements.txt`:
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Data Source and Licensing
 
