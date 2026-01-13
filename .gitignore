@@ -1,0 +1,73 @@
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment folders
+.venv/
+venv/
+ENV/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Data files (raw, interim, processed) - tracked via DVC instead
+data/raw/
+data/interim/
+data/processed/
+
+# DVC cache and temp files
+.dvc/cache/
+.dvc/tmp/
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+
+# Coverage and test reports
+.coverage
+htmlcov/
+*.cover
+*.py,cover
+
+# Environment files
+.env
+*.env
+
+# Jupyter Notebook output
+*.nbconvert.ipynb
+
+# Large files tracked by Git LFS
+*.parquet
+*.feather
+*.csv
+*.xlsx
+*.geojson
+
+# Reports and generated artifacts
+reports/
+plots/
+
+# MkDocs/Sphinx build
+site/
+_build/
+
+# Streamlit cache
+.streamlit/
+
+# Power BI files
+*.pbix
