@@ -9,22 +9,45 @@ A reproducible analytics and forecasting repository for UK tourism trends: visit
 - Automated CI for linting, tests, and notebook execution
 - Clear documentation (data dictionary & source catalog)
 
-## 🏗️ Project structure
-See the folder tree in the root for details on `data/`, `src/`, and `notebooks/`.
+## 🏗️ Project Structure
+```
+my-tourism-stuff/
+├─ data/              # raw, interim, processed datasets
+├─ docs/              # documentation and data dictionary
+├─ notebooks/         # Jupyter notebooks for analysis
+├─ src/               # source code for ETL, modeling, visualisation
+├─ scripts/           # automation scripts for ETL and modeling
+├─ tests/             # unit tests
+```
 
 ## 🚀 Quickstart
 ```bash
-# Create environment
+# 1. Create virtual environment
 python -m venv .venv && source .venv/bin/activate
+
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# Pre-commit hooks
+# 3. Install pre-commit hooks
 pre-commit install
 
-# Run ETL and build features
+# 4. Run ETL and feature engineering
 python scripts/fetch_data.py
 python scripts/run_etl.py
 python scripts/build_features.py
 
-# Run tests
+# 5. Run tests
 pytest -q
+```
+
+## 📚 Documentation
+- [Data Dictionary](docs/data_dictionary.md)
+- [Sources Catalog](docs/sources_catalog.md)
+
+## 🔐 Licensing
+- Code: MIT License
+- Data: Refer to `/docs/sources_catalog.md`
+
+## 🧭 Governance
+- Branch protection and PR reviews
+- Versioned data with DVC
