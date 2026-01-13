@@ -1,0 +1,23 @@
+pandas
+numpy
+pyarrow
+openpyxl
+geopandas
+shapely
+pyproj
+matplotlib
+seaborn
+plotly
+altair
+scikit-learn
+statsmodels
+prophet; sys_platform != 'win32'  # optional, comment if not needed
+great_expectations
+pytest
+pytest-cov
+pre-commit
+black
+isort
+ruff
+nbqa
+dvc
