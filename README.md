@@ -1,13 +1,13 @@
 # Tourism Analytics
 
-A reproducible analytics and forecasting repository for UK tourism trends: visitor volumes, spend, accommodation, attractions, and regional patterns.
+A reproducible analytics and forecasting repository for tourism trends: visitor volumes, spend, accommodation, attractions, and regional patterns.
 
 ## ✨ Features
 - Robust ETL and data validation
 - Geospatial enrichment (LAD/region joins)
 - Time-series forecasting (monthly/quarterly)
 - Automated CI for linting, tests, and notebook execution
-- Clear documentation (data dictionary & source catalog)
+- Clear documentation (data dictionary & source catalogue)
 
 ## 🏗️ Project Structure
 ```
@@ -42,11 +42,11 @@ pytest -q
 
 ## 📚 Documentation
 - [Data Dictionary](docs/data_dictionary.md)
-- [Sources Catalog](docs/sources_catalog.md)
+- [Sources Catalogue](docs/sources_catalogue.md)
 
 ## 🔐 Licensing
 - Code: MIT License
-- Data: Refer to `/docs/sources_catalog.md`
+- Data: Refer to `/docs/sources_catalogue.md`
 
 ## 🧭 Governance
 - Branch protection and PR reviews
